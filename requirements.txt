@@ -1,0 +1,47 @@
+# Core ML and Data Science
+fastf1>=3.0.0
+pandas>=1.5.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+
+# GPU-enabled XGBoost for CUDA 12.9 (GTX 1650)
+xgboost>=2.0.0
+cupy-cuda12x>=12.0.0
+
+# Perplexity API and Web Intelligence
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+httpx>=0.25.0
+
+# Weather API
+#openweathermapy>=1.3.0
+
+# Data Processing and Utilities
+python-dateutil>=2.8.2
+pytz>=2023.3
+joblib>=1.3.0
+tqdm>=4.65.0
+
+# Configuration Management
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+
+# Optional: API Framework (for future web interface)
+fastapi>=0.100.0
+uvicorn>=0.22.0
+pydantic>=2.0.0
+
+# Development and Code Quality
+pytest>=7.4.0
+black>=23.0.0
+flake8>=6.0.0
+isort>=5.12.0
+
+# Additional Utilities for F1 Data
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.15.0
+
+# New Flask API requirements
+Flask==2.3.3
+Flask-CORS==4.0.0

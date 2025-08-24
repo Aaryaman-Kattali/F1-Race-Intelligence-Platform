@@ -1,0 +1,458 @@
+{
+  "australian_gp": {
+    "official_names": ["Australian Grand Prix", "Australia"],
+    "aliases": ["Melbourne", "Albert Park", "Albert Park Circuit"],
+    "circuit_type": "mixed",
+    "overtaking_difficulty": "medium",
+    "qualifying_importance": 0.65,
+    "weather_sensitivity": 0.6,
+    "key_factors": ["adaptability", "tire_strategy", "weather_changes"],
+    "location": {
+      "city": "Melbourne",
+      "country": "Australia",
+      "coordinates": [-37.8497, 144.9675]
+    },
+    "typical_weather": {
+      "temperature_range": [15, 28],
+      "rain_probability": 0.4,
+      "heat_impact": "medium"
+    }
+  },
+  "chinese_gp": {
+    "official_names": ["Chinese Grand Prix", "China"],
+    "aliases": ["Shanghai", "Shanghai International Circuit"],
+    "circuit_type": "mixed",
+    "overtaking_difficulty": "medium",
+    "qualifying_importance": 0.7,
+    "weather_sensitivity": 0.5,
+    "key_factors": ["power_unit", "aerodynamics", "tire_strategy"],
+    "location": {
+      "city": "Shanghai",
+      "country": "China",
+      "coordinates": [31.3389, 121.2197]
+    },
+    "typical_weather": {
+      "temperature_range": [15, 25],
+      "rain_probability": 0.3,
+      "heat_impact": "medium"
+    }
+  },
+  "japanese_gp": {
+    "official_names": ["Japanese Grand Prix", "Japan"],
+    "aliases": ["Suzuka", "Suzuka Circuit"],
+    "circuit_type": "technical",
+    "overtaking_difficulty": "high",
+    "qualifying_importance": 0.75,
+    "weather_sensitivity": 0.8,
+    "key_factors": ["aerodynamics", "driver_skill", "weather_adaptation"],
+    "location": {
+      "city": "Suzuka",
+      "country": "Japan",
+      "coordinates": [34.8431, 136.5407]
+    },
+    "typical_weather": {
+      "temperature_range": [15, 25],
+      "rain_probability": 0.6,
+      "heat_impact": "low"
+    }
+  },
+  "bahrain_gp": {
+    "official_names": ["Bahrain Grand Prix", "Bahrain"],
+    "aliases": ["Sakhir", "Bahrain International Circuit"],
+    "circuit_type": "mixed",
+    "overtaking_difficulty": "medium",
+    "qualifying_importance": 0.7,
+    "weather_sensitivity": 0.3,
+    "key_factors": ["power_unit", "tire_strategy", "drs_zones"],
+    "location": {
+      "city": "Sakhir",
+      "country": "Bahrain",
+      "coordinates": [26.0325, 50.5106]
+    },
+    "typical_weather": {
+      "temperature_range": [25, 35],
+      "rain_probability": 0.05,
+      "heat_impact": "high"
+    }
+  },
+  "saudi_arabian_gp": {
+    "official_names": ["Saudi Arabian Grand Prix", "Saudi Arabia"],
+    "aliases": ["Jeddah", "Jeddah Corniche Circuit", "Jeddah Street Circuit"],
+    "circuit_type": "street_circuit",
+    "overtaking_difficulty": "medium",
+    "qualifying_importance": 0.8,
+    "weather_sensitivity": 0.2,
+    "key_factors": ["power_unit", "bravery", "qualifying_position"],
+    "location": {
+      "city": "Jeddah",
+      "country": "Saudi Arabia",
+      "coordinates": [21.6319, 39.1044]
+    },
+    "typical_weather": {
+      "temperature_range": [25, 35],
+      "rain_probability": 0.01,
+      "heat_impact": "high"
+    }
+  },
+  "miami_gp": {
+    "official_names": ["Miami Grand Prix", "Miami"],
+    "aliases": ["Miami International Autodrome", "Hard Rock Stadium"],
+    "circuit_type": "street_circuit",
+    "overtaking_difficulty": "medium",
+    "qualifying_importance": 0.7,
+    "weather_sensitivity": 0.6,
+    "key_factors": ["track_evolution", "tire_strategy", "heat_management"],
+    "location": {
+      "city": "Miami",
+      "country": "United States", 
+      "coordinates": [25.9581, -80.2389]
+    },
+    "typical_weather": {
+      "temperature_range": [25, 35],
+      "rain_probability": 0.4,
+      "heat_impact": "high"
+    }
+  },
+  "emilia_romagna_gp": {
+    "official_names": ["Emilia Romagna Grand Prix", "Emilia-Romagna"],
+    "aliases": ["Imola", "Autodromo Enzo e Dino Ferrari"],
+    "circuit_type": "technical",
+    "overtaking_difficulty": "very_high",
+    "qualifying_importance": 0.85,
+    "weather_sensitivity": 0.7,
+    "key_factors": ["qualifying_position", "driver_skill", "setup_optimization"],
+    "location": {
+      "city": "Imola",
+      "country": "Italy",
+      "coordinates": [44.3439, 11.7167]
+    },
+    "typical_weather": {
+      "temperature_range": [15, 25],
+      "rain_probability": 0.4,
+      "heat_impact": "medium"
+    }
+  },
+  "monaco_gp": {
+    "official_names": ["Monaco Grand Prix", "Monaco"],
+    "aliases": ["Monte Carlo", "Circuit de Monaco"],
+    "circuit_type": "street_circuit",
+    "overtaking_difficulty": "nearly_impossible",
+    "qualifying_importance": 0.95,
+    "weather_sensitivity": 0.9,
+    "key_factors": ["qualifying_position", "reliability", "driver_skill", "strategy"],
+    "location": {
+      "city": "Monaco",
+      "country": "Monaco",
+      "coordinates": [43.7347, 7.4206]
+    },
+    "typical_weather": {
+      "temperature_range": [20, 28],
+      "rain_probability": 0.2,
+      "heat_impact": "medium"
+    }
+  },
+  "spanish_gp": {
+    "official_names": ["Spanish Grand Prix", "Spain"],
+    "aliases": ["Barcelona", "Catalunya", "Circuit de Barcelona-Catalunya"],
+    "circuit_type": "mixed",
+    "overtaking_difficulty": "high",
+    "qualifying_importance": 0.75,
+    "weather_sensitivity": 0.5,
+    "key_factors": ["aerodynamics", "tire_strategy", "track_position"],
+    "location": {
+      "city": "Barcelona",
+      "country": "Spain",
+      "coordinates": [41.57, 2.2611]
+    },
+    "typical_weather": {
+      "temperature_range": [20, 30],
+      "rain_probability": 0.2,
+      "heat_impact": "medium"
+    }
+  },
+  "canadian_gp": {
+    "official_names": ["Canadian Grand Prix", "Canada"],
+    "aliases": ["Montreal", "Circuit Gilles Villeneuve"],
+    "circuit_type": "mixed",
+    "overtaking_difficulty": "low",
+    "qualifying_importance": 0.6,
+    "weather_sensitivity": 0.6,
+    "key_factors": ["power_unit", "reliability", "weather_adaptation"],
+    "location": {
+      "city": "Montreal",
+      "country": "Canada",
+      "coordinates": [45.5, -73.5228]
+    },
+    "typical_weather": {
+      "temperature_range": [15, 25],
+      "rain_probability": 0.5,
+      "heat_impact": "low"
+    }
+  },
+  "austrian_gp": {
+    "official_names": ["Austrian Grand Prix", "Austria"],
+    "aliases": ["Red Bull Ring", "Spielberg"],
+    "circuit_type": "high_speed",
+    "overtaking_difficulty": "low",
+    "qualifying_importance": 0.6,
+    "weather_sensitivity": 0.7,
+    "key_factors": ["power_unit", "altitude_adaptation", "weather_changes"],
+    "location": {
+      "city": "Spielberg",
+      "country": "Austria",
+      "coordinates": [47.2197, 14.7647]
+    },
+    "typical_weather": {
+      "temperature_range": [15, 30],
+      "rain_probability": 0.5,
+      "heat_impact": "medium"
+    }
+  },
+  "british_gp": {
+    "official_names": ["British Grand Prix", "Great Britain", "United Kingdom"],
+    "aliases": ["Silverstone", "UK GP"],
+    "circuit_type": "high_speed",
+    "overtaking_difficulty": "medium",
+    "qualifying_importance": 0.6,
+    "weather_sensitivity": 0.8,
+    "key_factors": ["aerodynamics", "power_unit", "weather_adaptation"],
+    "location": {
+      "city": "Silverstone",
+      "country": "United Kingdom",
+      "coordinates": [52.0786, -1.0169]
+    },
+    "typical_weather": {
+      "temperature_range": [15, 25],
+      "rain_probability": 0.6,
+      "heat_impact": "low"
+    }
+  },
+  "belgian_gp": {
+    "official_names": ["Belgian Grand Prix", "Belgium"],
+    "aliases": ["Spa", "Spa-Francorchamps", "Circuit de Spa-Francorchamps"],
+    "circuit_type": "high_speed",
+    "overtaking_difficulty": "low",
+    "qualifying_importance": 0.5,
+    "weather_sensitivity": 0.9,
+    "key_factors": ["power_unit", "weather_adaptation", "slipstream"],
+    "location": {
+      "city": "Spa",
+      "country": "Belgium",
+      "coordinates": [50.4372, 5.9714]
+    },
+    "typical_weather": {
+      "temperature_range": [15, 25],
+      "rain_probability": 0.7,
+      "heat_impact": "low"
+    }
+  },
+  "hungarian_gp": {
+    "official_names": ["Hungarian Grand Prix", "Hungary"],
+    "aliases": ["Hungaroring", "Budapest"],
+    "circuit_type": "technical",
+    "overtaking_difficulty": "very_high",
+    "qualifying_importance": 0.85,
+    "weather_sensitivity": 0.7,
+    "key_factors": ["qualifying_position", "tire_strategy", "track_position"],
+    "location": {
+      "city": "Budapest",
+      "country": "Hungary",
+      "coordinates": [47.581707, 19.250553]
+    },
+    "typical_weather": {
+      "temperature_range": [25, 35],
+      "rain_probability": 0.3,
+      "heat_impact": "high"
+    }
+  },
+  "dutch_gp": {
+    "official_names": ["Dutch Grand Prix", "Netherlands"],
+    "aliases": ["Zandvoort", "Circuit Zandvoort"],
+    "circuit_type": "technical",
+    "overtaking_difficulty": "high",
+    "qualifying_importance": 0.8,
+    "weather_sensitivity": 0.6,
+    "key_factors": ["qualifying_position", "wind_adaptation", "banked_corners"],
+    "location": {
+      "city": "Zandvoort",
+      "country": "Netherlands",
+      "coordinates": [52.388851, 4.540608]
+    },
+    "typical_weather": {
+      "temperature_range": [15, 25],
+      "rain_probability": 0.4,
+      "heat_impact": "low"
+    }
+  },
+  "italian_gp": {
+    "official_names": ["Italian Grand Prix", "Italy"],
+    "aliases": ["Monza", "Autodromo Nazionale di Monza"],
+    "circuit_type": "high_speed",
+    "overtaking_difficulty": "low",
+    "qualifying_importance": 0.5,
+    "weather_sensitivity": 0.4,
+    "key_factors": ["power_unit", "slipstream", "low_downforce"],
+    "location": {
+      "city": "Monza",
+      "country": "Italy",
+      "coordinates": [45.6181, 9.2811]
+    },
+    "typical_weather": {
+      "temperature_range": [20, 30],
+      "rain_probability": 0.3,
+      "heat_impact": "medium"
+    }
+  },
+  "azerbaijan_gp": {
+    "official_names": ["Azerbaijan Grand Prix", "Azerbaijan"],
+    "aliases": ["Baku", "Baku City Circuit"],
+    "circuit_type": "street_circuit",
+    "overtaking_difficulty": "medium",
+    "qualifying_importance": 0.7,
+    "weather_sensitivity": 0.3,
+    "key_factors": ["power_unit", "reliability", "adaptability"],
+    "location": {
+      "city": "Baku",
+      "country": "Azerbaijan",
+      "coordinates": [40.3725, 49.8533]
+    },
+    "typical_weather": {
+      "temperature_range": [20, 30],
+      "rain_probability": 0.2,
+      "heat_impact": "medium"
+    }
+  },
+  "singapore_gp": {
+    "official_names": ["Singapore Grand Prix", "Singapore"],
+    "aliases": ["Marina Bay", "Marina Bay Street Circuit"],
+    "circuit_type": "street_circuit",
+    "overtaking_difficulty": "high",
+    "qualifying_importance": 0.8,
+    "weather_sensitivity": 0.6,
+    "key_factors": ["physical_endurance", "concentration", "reliability"],
+    "location": {
+      "city": "Singapore",
+      "country": "Singapore",
+      "coordinates": [1.2914, 103.864]
+    },
+    "typical_weather": {
+      "temperature_range": [28, 35],
+      "rain_probability": 0.4,
+      "heat_impact": "very_high"
+    }
+  },
+  "united_states_gp": {
+    "official_names": ["United States Grand Prix", "USA"],
+    "aliases": ["Austin", "COTA", "Circuit of the Americas"],
+    "circuit_type": "mixed",
+    "overtaking_difficulty": "medium",
+    "qualifying_importance": 0.65,
+    "weather_sensitivity": 0.5,
+    "key_factors": ["tire_strategy", "power_unit", "track_evolution"],
+    "location": {
+      "city": "Austin",
+      "country": "United States",
+      "coordinates": [30.1328, -97.6411]
+    },
+    "typical_weather": {
+      "temperature_range": [20, 30],
+      "rain_probability": 0.3,
+      "heat_impact": "medium"
+    }
+  },
+  "mexico_city_gp": {
+    "official_names": ["Mexico City Grand Prix", "Mexico"],
+    "aliases": ["Mexico", "Autodromo Hermanos Rodriguez"],
+    "circuit_type": "mixed",
+    "overtaking_difficulty": "medium",
+    "qualifying_importance": 0.7,
+    "weather_sensitivity": 0.4,
+    "key_factors": ["altitude_adaptation", "power_unit", "thin_air"],
+    "location": {
+      "city": "Mexico City",
+      "country": "Mexico",
+      "coordinates": [19.4042, -99.0907]
+    },
+    "typical_weather": {
+      "temperature_range": [15, 25],
+      "rain_probability": 0.4,
+      "heat_impact": "medium"
+    }
+  },
+  "sao_paulo_gp": {
+    "official_names": ["São Paulo Grand Prix", "Brazil"],
+    "aliases": ["Interlagos", "Sao Paulo", "Autodromo Jose Carlos Pace"],
+    "circuit_type": "mixed",
+    "overtaking_difficulty": "medium",
+    "qualifying_importance": 0.7,
+    "weather_sensitivity": 0.8,
+    "key_factors": ["weather_adaptation", "elevation_changes", "tire_strategy"],
+    "location": {
+      "city": "São Paulo",
+      "country": "Brazil",
+      "coordinates": [-23.7036, -46.6997]
+    },
+    "typical_weather": {
+      "temperature_range": [20, 30],
+      "rain_probability": 0.6,
+      "heat_impact": "medium"
+    }
+  },
+  "las_vegas_gp": {
+    "official_names": ["Las Vegas Grand Prix", "Las Vegas"],
+    "aliases": ["Vegas", "Las Vegas Strip Circuit"],
+    "circuit_type": "street_circuit",
+    "overtaking_difficulty": "medium",
+    "qualifying_importance": 0.7,
+    "weather_sensitivity": 0.3,
+    "key_factors": ["power_unit", "cooling", "night_conditions"],
+    "location": {
+      "city": "Las Vegas",
+      "country": "United States",
+      "coordinates": [36.1147, -115.1728]
+    },
+    "typical_weather": {
+      "temperature_range": [10, 25],
+      "rain_probability": 0.1,
+      "heat_impact": "low"
+    }
+  },
+  "qatar_gp": {
+    "official_names": ["Qatar Grand Prix", "Qatar"],
+    "aliases": ["Lusail", "Lusail International Circuit"],
+    "circuit_type": "mixed",
+    "overtaking_difficulty": "medium",
+    "qualifying_importance": 0.7,
+    "weather_sensitivity": 0.3,
+    "key_factors": ["tire_strategy", "physical_endurance", "heat_management"],
+    "location": {
+      "city": "Lusail",
+      "country": "Qatar",
+      "coordinates": [25.49, 51.4542]
+    },
+    "typical_weather": {
+      "temperature_range": [25, 35],
+      "rain_probability": 0.05,
+      "heat_impact": "very_high"
+    }
+  },
+  "abu_dhabi_gp": {
+    "official_names": ["Abu Dhabi Grand Prix", "Abu Dhabi"],
+    "aliases": ["Yas Marina", "Yas Marina Circuit"],
+    "circuit_type": "mixed",
+    "overtaking_difficulty": "high",
+    "qualifying_importance": 0.75,
+    "weather_sensitivity": 0.3,
+    "key_factors": ["qualifying_position", "tire_strategy", "twilight_conditions"],
+    "location": {
+      "city": "Abu Dhabi",
+      "country": "United Arab Emirates",
+      "coordinates": [24.4672, 54.6031]
+    },
+    "typical_weather": {
+      "temperature_range": [25, 35],
+      "rain_probability": 0.05,
+      "heat_impact": "high"
+    }
+  }
+}
