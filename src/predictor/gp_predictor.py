@@ -297,7 +297,8 @@ class GPPredictor:
                 'team_2025': driver_features.get('team_2025', 'Unknown'),
                 'championship_position': real_perf.get('position', 20),
                 'championship_points': real_perf.get('points', 0),
-                'is_rookie_2025': driver_features.get('is_rookie_2025', False)
+                'is_rookie_2025': driver_features.get('is_rookie_2025', False),
+                'data_confidence': driver_features.get('data_confidence', 1.0)
             }
         
         # Get top 10 predictions
@@ -312,7 +313,8 @@ class GPPredictor:
                 'win_probability': pred['win_probability'],
                 'rank': pred['rank'],
                 'championship_position': pred['championship_position'],
-                'is_rookie': pred['is_rookie_2025']
+                'is_rookie': pred['is_rookie_2025'],
+                'data_confidence': pred['data_confidence']
             }
             for driver, pred in sorted_preds[:10]
         ]

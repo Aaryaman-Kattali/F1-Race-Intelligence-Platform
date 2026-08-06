@@ -143,7 +143,7 @@ class FastF1Collector:
             
             # Extract weather data
             if race_session:
-                race_data['weather'] = self._extract_weather_data(race_session)
+                race_data['weather'] = race_session.get('weather', {'available': False})
             
             return race_data if race_data['race_winner'] else None
             
@@ -168,11 +168,82 @@ class FastF1Collector:
                 'weather': self._extract_weather_data(session) if hasattr(session, 'weather_data') else {}
             }
             
+            # Add raw qualifying results with Q1/Q2/Q3 times
+            if session_type == 'Qualifying':
+                session_data['raw_qualifying'] = self._extract_raw_qualifying(session.results)
+            
+            # Add raw per-lap records for lap_times ingestion
+            if not session.laps.empty:
+                session_data['raw_laps'] = self._extract_raw_laps(session.laps, session_type)
+            
             return session_data
             
         except Exception as e:
             logger.debug(f"Error getting {session_type} session data: {e}")
             return None
+    
+    def _timedelta_to_str(self, td) -> Optional[str]:
+        """Convert a pandas Timedelta to a formatted time string, or None if NaT."""
+        if pd.isna(td):
+            return None
+        total_seconds = td.total_seconds()
+        minutes = int(total_seconds // 60)
+        seconds = total_seconds % 60
+        return f"{minutes}:{seconds:06.3f}"
+    
+    def _timedelta_to_seconds(self, td) -> Optional[float]:
+        """Convert a pandas Timedelta to float seconds, or None if NaT."""
+        if pd.isna(td):
+            return None
+        return round(td.total_seconds(), 3)
+    
+    def _extract_raw_qualifying(self, results: pd.DataFrame) -> List[Dict]:
+        """Extract qualifying results with Q1/Q2/Q3 times from raw FastF1 results."""
+        quali_results = []
+        for _, driver in results.iterrows():
+            quali_results.append({
+                'driver_code': self._safe_get(driver, 'Abbreviation', ''),
+                'driver_name': f"{self._safe_get(driver, 'FirstName', '')} {self._safe_get(driver, 'LastName', '')}".strip(),
+                'team': self._safe_get(driver, 'TeamName', ''),
+                'position': self._safe_get(driver, 'Position', None),
+                'q1_time': self._timedelta_to_str(self._safe_get(driver, 'Q1', pd.NaT)),
+                'q2_time': self._timedelta_to_str(self._safe_get(driver, 'Q2', pd.NaT)),
+                'q3_time': self._timedelta_to_str(self._safe_get(driver, 'Q3', pd.NaT)),
+            })
+        return quali_results
+    
+    def _extract_raw_laps(self, laps: pd.DataFrame, session_type: str) -> List[Dict]:
+        """Extract raw per-lap records from a FastF1 laps DataFrame."""
+        raw_laps = []
+        for _, lap in laps.iterrows():
+            driver_code = self._safe_get(lap, 'Driver', '')
+            if not driver_code or pd.isna(driver_code):
+                continue
+            
+            lap_time = self._timedelta_to_seconds(self._safe_get(lap, 'LapTime', pd.NaT))
+            # Skip laps with no valid lap time (pit in/out laps)
+            if lap_time is None or lap_time <= 0:
+                continue
+            
+            lap_number = self._safe_get(lap, 'LapNumber', None)
+            if lap_number is None or pd.isna(lap_number):
+                continue
+                
+            raw_laps.append({
+                'session_type': session_type.upper(),
+                'driver_code': driver_code,
+                'lap_number': int(lap_number),
+                'lap_time_seconds': lap_time,
+                'sector1_seconds': self._timedelta_to_seconds(self._safe_get(lap, 'Sector1Time', pd.NaT)),
+                'sector2_seconds': self._timedelta_to_seconds(self._safe_get(lap, 'Sector2Time', pd.NaT)),
+                'sector3_seconds': self._timedelta_to_seconds(self._safe_get(lap, 'Sector3Time', pd.NaT)),
+                'compound': self._safe_get(lap, 'Compound', None) if not pd.isna(self._safe_get(lap, 'Compound', None)) else None,
+                'tyre_life': int(self._safe_get(lap, 'TyreLife', 0)) if not pd.isna(self._safe_get(lap, 'TyreLife', None)) else None,
+                'stint': int(self._safe_get(lap, 'Stint', 0)) if not pd.isna(self._safe_get(lap, 'Stint', None)) else None,
+                'position': int(self._safe_get(lap, 'Position', 0)) if not pd.isna(self._safe_get(lap, 'Position', None)) else None,
+                'is_personal_best': bool(self._safe_get(lap, 'IsPersonalBest', False)) if not pd.isna(self._safe_get(lap, 'IsPersonalBest', None)) else None,
+            })
+        return raw_laps
     
     def _process_session_results(self, results: pd.DataFrame) -> List[Dict]:
         """Process session results into clean format."""

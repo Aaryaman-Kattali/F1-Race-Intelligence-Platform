@@ -1,158 +1,246 @@
-# F1 Race Predictor Project - Detailed Pointwise Breakdown
+# F1 Race Intelligence Platform
 
----
+A data engineering + agentic AI platform for Formula 1 race prediction and analysis. Built around a hybrid rule-based/XGBoost prediction engine, extended with a BigQuery data warehouse, dbt transformations, simulated streaming ingestion, PySpark feature engineering, and a LangChain natural-language query agent.
 
-## 1. Dataset Collection
+## Architecture
 
-- **Dataset Source:**  
-  - Historical race data is collected using the `FastF1Collector` class, which leverages the FastF1 API.
-  - Real-time and current intelligence is collected from Perplexity AI and official F1.com sources.
-  - Weather forecasts are gathered from OpenWeatherMap.
+```mermaid
+graph TB
+    subgraph Ingestion
+        FF[FastF1 API] --> BI[Batch Ingest]
+        FF --> SI[Simulated Stream<br>Pub/Sub Replay]
+    end
 
-- **Data Format:**  
-  - Data is structured per race weekend, including sessions (`Race`, `Qualifying`, `FP1`, `FP2`, `FP3`).
-  - Driver results and lap data are stored as dictionaries and pandas DataFrames, organized by session, driver, and metrics.
+    subgraph Warehouse
+        BI --> BQ[(BigQuery<br>Raw Tables)]
+        SI --> BQ
+        BQ --> DBT[dbt<br>Staging + Marts]
+        DBT --> AN[(Analytical<br>Tables)]
+    end
 
-- **Data Preprocessing:**  
-  - Lap times are analyzed (mean, fastest lap, consistency via coefficient of variation).
-  - Outliers in lap times are removed (laps >10% slower than fastest).
-  - Driver data is filtered to only include active 2025 drivers for predictions.
+    subgraph Processing
+        BQ --> SP[PySpark<br>Telemetry Features]
+        SP --> PQ[(Parquet / BQ<br>Processed)]
+    end
 
-- **Data Storage:**  
-  - Historical race weekend data and processed driver/session/lap metrics are stored in memory or exported as JSON/pickle for batch processing.  
-  - Feature engineering is performed to create prediction features per driver for each race.
+    subgraph Prediction
+        AN --> PE[Prediction Engine<br>Rule-Based + XGBoost]
+        PQ --> PE
+        PE --> MR[Model Registry]
+    end
 
-- **Class Labels:**  
-  - Drivers are labeled by their 3-letter code (e.g., `VER`, `HAM`).
-  - Results include driver position, team, points, championship standing, and whether the driver is a rookie.
+    subgraph Agent
+        AN --> QA[LangChain Agent<br>Gemini 2.5 Flash]
+        QA -->|SELECT only| AN
+        QA --> QL[Query Logger]
+    end
 
----
+    subgraph API
+        PE --> FA[FastAPI]
+        QA --> FA
+        FA -->|/api/predict| U[User]
+        FA -->|/api/ask| U
+    end
+```
 
-## 2. Model Architecture
+## Components
 
-- **Model Type:**  
-  - The main prediction algorithm is a custom ensemble logic combining local championship standings, historical results, qualifying performance, and weather/circuit analysis.
-  - Pattern-matching and weighted ensemble predictions are performed. XGBoost is available for experimental use (GPU supported).
+| Component | Technology | Description |
+|-----------|-----------|-------------|
+| **API** | FastAPI + Uvicorn | REST API with prediction, circuit listing, health, and natural-language query endpoints |
+| **Prediction Engine** | Rule-based + XGBoost | Hybrid scoring: championship form (40%), historical (20%), qualifying (25%), circuit (10%), team (5%), with rookie penalty |
+| **Data Warehouse** | Google BigQuery | Raw data lake with race results, qualifying, lap times, weather, standings |
+| **Transformations** | dbt (BigQuery) | Staging views + analytical mart tables (driver form, tire degradation, circuit performance). **Requires BigQuery — no offline fallback** |
+| **Batch Ingestion** | FastF1 → BigQuery | Scheduled historical data pull via FastF1 API, runnable as cron/GitHub Action |
+| **Streaming Ingestion** | Pub/Sub (simulated) | **Simulated streaming**: replays historical telemetry at configurable intervals via Pub/Sub to exercise publish → consume → incremental-load pipeline. Not true live in-race data |
+| **Processing** | PySpark | Telemetry feature engineering using window functions, aggregations, and UDFs. **Demonstrates distributed processing patterns** — dataset volume doesn't require Spark's parallelism, but the same job scales to multi-season archives |
+| **Query Agent** | LangChain + Gemini 2.5 Flash | Text-to-SQL agent with safety guardrails: read-only service account, SELECT-only enforcement, dry-run cost check before execution |
+| **Model Registry** | Filesystem-based | Versioned model storage with metadata (git hash, accuracy, training info) |
+| **CI/CD** | GitHub Actions | Lint → test → dbt test (gated on secrets) → Docker build + health check |
+| **Observability** | Query Logger | Every agent interaction logged to BigQuery/SQLite with question, SQL, latency, cost estimate |
 
-- **Input Features:**  
-  - Features include championship position, points, average historical position, qualifying grid position, circuit/type advantages, team advantages, and rookie status.
+## Quick Start
 
-- **Output Layer:**  
-  - Outputs are a ranked list of drivers with win probabilities for each Grand Prix.
+### Prerequisites
 
----
+- Python 3.11+
+- Google Cloud project with BigQuery API enabled (for warehouse/dbt/agent)
+- Google API key for Gemini (for the query agent)
 
-## 3. Hyperparameters
+### 1. Clone and Install
 
-- **Feature Weighting:**  
-  - Championship form: 40%
-  - Historical performance: 20%
-  - Qualifying advantage: 25%
-  - Circuit-specific advantages: 10%
-  - Team performance: 5%
-  - Rookie penalty: -15% (if applicable)
+```bash
+git clone https://github.com/Aaryaman-Kattali/F1-Race-Predictor.git
+cd F1-Race-Predictor
+python -m venv .venv
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+pip install -r requirements.txt
+```
 
-- **Configurable Parameters:**  
-  - Qualifying importance per circuit (default 0.7, can be circuit-specific).
-  - Team advantage mapping based on constructor standings.
-  - No explicit epochs or early stopping (non-iterative ensemble method).
+### 2. Configure Environment
 
----
+```bash
+cp .env.example .env
+# Edit .env with your keys:
+```
 
-## 4. Training Process
+```env
+# Required for prediction (existing)
+PERPLEXITY_API_KEY=your_perplexity_key
+OPENWEATHER_API_KEY=your_openweather_key
 
-- **Loss Function:**  
-  - Not applicable; predictions are generated by weighted scoring and normalization.
+# Required for BigQuery / dbt / agent
+GCP_PROJECT_ID=your-gcp-project
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+GOOGLE_AGENT_CREDENTIALS=/path/to/readonly-service-account.json
 
-- **Metrics:**  
-  - Main evaluation metric: accuracy of predicted winner vs. actual winner.
-  - Additional: win probability separation (model confidence).
-  - Precision, recall, and F1-score can be calculated via testing scripts.
+# Required for query agent
+GOOGLE_API_KEY=your_gemini_api_key
 
-- **Training/Validation Split:**  
-  - Historical race data is filtered to only use active drivers and recent years.
-  - Validation is performed using known results from past races.
+# Optional
+OFFLINE_MODE=false
+AGENT_MAX_BYTES=104857600  # 100MB dry-run cost limit
+```
 
-- **Overfitting Handling:**  
-  - Overfitting is mitigated by balanced feature weighting, rookie penalties, and circuit-specific logic.
+### 3. Run the API
 
----
+```bash
+uvicorn api.app:app --reload
+# API: http://localhost:8000
+# Docs: http://localhost:8000/docs
+```
 
-## 5. Testing and Validation
+### 4. Run with Docker
 
-- **Test Dataset:**  
-  - Testing is performed using real race results and historical data for validation.
-  - Scripts such as `test_prediction.py` automate prediction vs. actual result checks.
+```bash
+docker compose up
+# With Pub/Sub emulator for streaming tests:
+docker compose --profile streaming up
+```
 
-- **Validation Accuracy:**  
-  - Accuracy is output in logs/scripts; confidence level (High/Medium/Low) is reported based on win probability separation.
+## Usage
 
----
+### Predict a Race
 
-## 6. Real-Time Recognition
+```bash
+# CLI
+python scripts/predict_gp.py "Hungarian Grand Prix"
 
-- **Thresholding:**  
-  - Win probabilities are normalized (sum to 1) and thresholded for reporting.
-  - Qualifying boosts are applied in real-time based on official session data integration.
+# API
+curl -X POST http://localhost:8000/api/predict \
+  -H "Content-Type: application/json" \
+  -d '{"gp_name": "Hungarian Grand Prix"}'
+```
 
-- **Smoothing:**  
-  - Not directly implemented; smoothing logic could be added for temporal predictions across sessions/races.
+### Ask a Question (Agent)
 
----
+```bash
+curl -X POST http://localhost:8000/api/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Which driver had the best tire degradation at Monza in 2024?"}'
+```
 
-## 7. Avoiding Overfitting
+### Batch Ingestion
 
-- **Regularization:**  
-  - Achieved via balanced feature weights and rookie penalties.
-  - No explicit regularization method (non-parametric scoring).
+```bash
+python -m src.ingestion.batch_ingest --year 2024 --circuits all
+```
 
-- **Data Augmentation:**  
-  - Not directly applicable; can add more historical races or driver variants if needed.
+### Simulated Streaming
 
----
+```bash
+python -m src.ingestion.stream_ingest --simulate \
+  --circuit "Hungarian Grand Prix" --year 2024 --interval 0.5
+```
 
-## 8. Challenges and Solutions
+### PySpark Feature Engineering
 
-- **Insufficient Training Data:**  
-  - Solution: Use multiple seasons and filter to only active drivers.
-  - Combine results from multiple sources (historical, current, weather).
+```bash
+spark-submit src/processing/telemetry_spark_job.py \
+  --year 2024 --source fastf1
+```
 
-- **Complexity of Driver Performance:**  
-  - Circuit-specific and home advantages are implemented.
-  - Qualifying session performance is integrated for prediction boost.
+### dbt (Requires BigQuery)
 
-- **Redundant API Calls:**  
-  - Solution: Local data caching and removal of unnecessary external API requests.
+```bash
+cd dbt
+dbt run --profiles-dir .
+dbt test --profiles-dir .
+```
 
----
+## Testing
 
-## 9. Tools and Libraries
+```bash
+# Unit tests
+pytest tests/ -v --tb=short --cov=src
 
-- **Main Libraries:**  
-  - FastF1: Historical data collection.
-  - Pandas/Numpy: Data processing, feature engineering.
-  - OpenWeatherMap: Weather API (via requests).
-  - XGBoost (optional): GPU-accelerated model experimentation.
-  - Logging, argparse: Utilities for CLI and testing.
-  - Perplexity AI: Current intelligence (integration for live data).
-  - Python (3.8+): Core language.
+# Lint
+black --check --line-length 120 .
+flake8 . --config setup.cfg
+```
 
----
+## Project Structure
 
-## 10. Deployment Considerations
+```
+F1-Race-Predictor/
+├── api/                        # FastAPI application
+│   └── app.py
+├── config/                     # Configuration + dynamic standings
+│   ├── settings.py
+│   └── circuits.json
+├── src/
+│   ├── agent/                  # LangChain text-to-SQL agent
+│   │   ├── query_agent.py      #   Gemini + safety guardrails
+│   │   └── query_logger.py     #   LLMOps observability
+│   ├── data_collectors/        # Data ingestion (FastF1, Perplexity, weather)
+│   ├── ingestion/              # Batch + simulated streaming paths
+│   │   ├── batch_ingest.py
+│   │   ├── stream_ingest.py    #   Historical replay, not live data
+│   │   └── pubsub_config.py
+│   ├── mlops/                  # Model registry + versioning
+│   │   └── model_registry.py
+│   ├── predictor/              # Prediction engine
+│   │   ├── gp_predictor.py     #   Hybrid rule-based + XGBoost
+│   │   └── circuit_analyzer.py
+│   ├── processing/             # PySpark feature engineering
+│   │   └── telemetry_spark_job.py
+│   ├── processors/             # Feature engineering (pandas)
+│   │   ├── feature_engineer.py
+│   │   ├── historical_processor.py
+│   │   └── current_processor.py
+│   ├── utils/                  # Helpers, circuit mapping
+│   └── warehouse/              # BigQuery loader + schemas
+│       ├── bigquery_loader.py  #   SQLite fallback for dev only
+│       └── schema.py
+├── dbt/                        # dbt project (BigQuery only)
+│   ├── models/staging/         #   stg_race_results, stg_qualifying, stg_lap_times
+│   └── models/marts/           #   driver_form_last5, tire_degradation, circuit_performance
+├── tests/                      # pytest suite
+├── scripts/                    # CLI prediction scripts
+├── .github/workflows/          # CI + scheduled ingestion
+├── Dockerfile
+├── docker-compose.yml
+└── requirements.txt
+```
 
-- **Model Export:**  
-  - Predictions and driver breakdowns are logged and can be exported to JSON/pickle.
-  - XGBoost model can be exported if used (not default).
+## Agent Safety Design
 
-- **Hardware Optimization:**  
-  - GPU support for fast predictions (XGBoost).
-  - Logging of hardware status and GPU capability.
+The natural-language query agent implements three safety guardrails:
 
-- **Real-Time Use:**  
-  - All prediction logic is optimized to run quickly with local data.
-  - No heavy API calls during live prediction.
+1. **Read-only service account** (`GOOGLE_AGENT_CREDENTIALS`): The agent connects to BigQuery with a service account that has only `bigquery.dataViewer` permissions — it cannot modify or delete data.
 
----
+2. **SELECT-only enforcement**: Before execution, generated SQL is validated to ensure it starts with `SELECT` or `WITH` and contains no DML/DDL keywords (`INSERT`, `UPDATE`, `DELETE`, `DROP`, etc.).
 
-> This breakdown gives you a clear overview of the F1 Race Predictor project structure, logic, and technical decisions, mapped to your requested headings.
+3. **Dry-run cost check**: A BigQuery dry-run estimates bytes to be scanned. Queries exceeding the configurable threshold (default 100MB, set via `AGENT_MAX_BYTES`) are rejected to prevent accidental full-table scans.
+
+## Honest Notes
+
+- **Streaming is simulated**: The streaming path replays historical FastF1 telemetry at configurable intervals via Pub/Sub. FastF1 doesn't provide true live in-race telemetry. This is a legitimate architecture demonstration, not a claim of real-time capability.
+
+- **Spark at this scale is demonstrative**: F1 lap-by-lap telemetry for a season is ~thousands of rows — not a Spark-scale dataset. The PySpark job demonstrates genuine distributed processing patterns (window functions, aggregations) that would scale to multi-season archives. It's honest portfolio engineering, not a claim that this specific dataset requires Spark.
+
+- **dbt requires BigQuery**: The dbt transformation layer targets BigQuery only. There is no offline/SQLite dbt fallback. Only the raw ingestion layer (`BigQueryLoader`) has a SQLite fallback for local development convenience.
+
+## License
+
+MIT

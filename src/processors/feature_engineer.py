@@ -152,6 +152,50 @@ class Enhanced2025FeatureEngineer:
         logger.info(f"🔍 Historical data filtered to 2025 active drivers only")
         return filtered_data
     
+    def _get_teammate(self, driver_code: str, historical_data: List[Dict], current_intelligence: Dict) -> Optional[str]:
+        """
+        Dynamically find the driver's teammate without hardcoding a fixed year.
+        First checks current intelligence (for true rookies starting their first season).
+        If not found, looks at the driver's most recent race in historical data.
+        """
+        team = None
+        
+        # 1. Try to get team from current intelligence
+        if current_intelligence and 'driver_standings' in current_intelligence:
+            drivers = current_intelligence['driver_standings'].get('drivers', [])
+            for d in drivers:
+                if d.get('code') == driver_code:
+                    team = d.get('team')
+                    break
+            
+            if team:
+                # Find teammate in current intelligence
+                for d in drivers:
+                    if d.get('team') == team and d.get('code') != driver_code:
+                        return d.get('code')
+                        
+        # 2. Fallback: Find most recent team from historical data
+        if historical_data:
+            sorted_races = sorted(historical_data, key=lambda x: (x.get('year', 0), x.get('round', 0)), reverse=True)
+            for race in sorted_races:
+                drivers_in_race = race.get('drivers', {})
+                if driver_code in drivers_in_race:
+                    team = drivers_in_race[driver_code].get('team')
+                    if team:
+                        # Find teammate in that same race
+                        for other_code, other_data in drivers_in_race.items():
+                            if other_code != driver_code and other_data.get('team') == team:
+                                return other_code
+                                
+        # 3. Last resort fallback
+        driver_info = next((d for d in ACTIVE_DRIVERS_2025 if d['code'] == driver_code), None)
+        if driver_info:
+            team = driver_info.get('team')
+            return next((d['code'] for d in ACTIVE_DRIVERS_2025 
+                             if d['team'] == team and d['code'] != driver_code), None)
+            
+        return None
+
     def _create_driver_features_real_2025(self, driver_code: str, historical_data: List[Dict],
                                         current_intelligence: Dict, weather_data: Dict, 
                                         circuit_config: Dict) -> Optional[Dict]:
@@ -159,16 +203,38 @@ class Enhanced2025FeatureEngineer:
         try:
             features = {}
             
-            # Check if this is a rookie driver
+            # 1. Determine data confidence based on career and circuit experience
+            total_races = sum(1 for race in historical_data if driver_code in race.get('drivers', {}))
+            
+            circuit_name = circuit_config.get('circuit_name', '').lower()
+            circuit_races = sum(1 for race in historical_data 
+                              if driver_code in race.get('drivers', {}) 
+                              and circuit_name in race.get('circuit_name', '').lower())
+            
+            # Confidence function: highly penalizes < 2 circuit races, but respects general F1 experience
+            circuit_conf = min(1.0, circuit_races / 3.0)
+            career_conf = min(1.0, total_races / 20.0)
+            data_confidence = round(0.7 * circuit_conf + 0.3 * career_conf, 2)
+            
+            features['data_confidence'] = data_confidence
+
+            # 2. Base historical features
             is_rookie = is_rookie_driver_2025(driver_code)
             
-            if is_rookie:
-                logger.debug(f"🆕 Processing rookie: {driver_code} (2025 data only)")
-                # Rookies: Use REAL 2025 season performance
-                hist_features = self._create_rookie_features_from_2025_data(driver_code)
+            if is_rookie or data_confidence < 0.4:
+                logger.debug(f"🆕 Low confidence ({data_confidence}) for {driver_code}: using teammate proxy")
+                teammate = self._get_teammate(driver_code, historical_data, current_intelligence)
+                
+                # Fetch teammate's historical features as a baseline if available
+                if teammate:
+                    hist_features = self._create_historical_features(teammate, historical_data, circuit_config)
+                    # Apply a small "rookie/inexperience tax" to the teammate proxy
+                    hist_features['historical_avg_position'] = min(20, hist_features.get('historical_avg_position', 10) + 2)
+                    hist_features['historical_consistency'] = max(0.1, hist_features.get('historical_consistency', 0.5) * 0.8)
+                else:
+                    hist_features = self._create_rookie_features_from_2025_data(driver_code)
             else:
-                logger.debug(f"📈 Processing experienced driver: {driver_code} (historical + real 2025)")
-                # Experienced: Use filtered historical + real 2025 performance
+                logger.debug(f"📈 Experienced driver {driver_code} (confidence: {data_confidence})")
                 hist_features = self._create_historical_features(driver_code, historical_data, circuit_config)
             
             features.update(hist_features)

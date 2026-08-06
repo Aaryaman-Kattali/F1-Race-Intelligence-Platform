@@ -1,0 +1,7 @@
+version: 2
+
+seeds:
+  - name: circuit_regulation_risk
+    config:
+      column_types:
+        regulation_similarity_weight: FLOAT64
