@@ -1,0 +1,115 @@
+name: F1 Platform CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install black flake8 pytest
+        pip install -r requirements.txt
+
+    - name: Lint with black
+      run: |
+        black --check .
+
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+
+    - name: Run pytest
+      run: |
+        pytest tests/ -v
+
+  dbt-test:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dbt
+      run: |
+        pip install dbt-bigquery
+
+    - name: Create credentials file
+      if: env.GOOGLE_APPLICATION_CREDENTIALS_JSON != ''
+      run: |
+        mkdir -p credentials
+        echo "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > credentials/writer.json
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+
+    - name: Run dbt
+      if: env.GOOGLE_APPLICATION_CREDENTIALS_JSON != '' && env.GCP_PROJECT_ID != ''
+      run: |
+        cd dbt
+        dbt run --profiles-dir .
+        dbt test --profiles-dir .
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        GOOGLE_APPLICATION_CREDENTIALS: ../credentials/writer.json
+
+    - name: Skip dbt
+      if: env.GOOGLE_APPLICATION_CREDENTIALS_JSON == '' || env.GCP_PROJECT_ID == ''
+      run: |
+        echo "Skipping dbt run/test because GCP secrets are not configured in the repository."
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build Docker image
+      run: |
+        docker build -t f1-platform:latest .
+
+    - name: Test Docker Healthcheck
+      run: |
+        # Run container detached
+        docker run -d --name f1-api -p 8000:8000 f1-platform:latest
+        
+        # Wait for the container to start and healthcheck to pass
+        echo "Waiting for container to become healthy..."
+        sleep 15
+        
+        # Check health status
+        HEALTH=$(docker inspect --format='{{json .State.Health.Status}}' f1-api)
+        echo "Health status: $HEALTH"
+        
+        if [ "$HEALTH" != "\"healthy\"" ]; then
+          echo "Container is not healthy! Logs:"
+          docker logs f1-api
+          exit 1
+        fi
+        
+        echo "Container is healthy!"
