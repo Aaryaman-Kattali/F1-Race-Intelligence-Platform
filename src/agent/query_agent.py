@@ -122,8 +122,18 @@ def validate_sql_is_select(sql: str) -> bool:
     cleaned = cleaned.strip()
 
     forbidden_keywords = [
-        "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "TRUNCATE",
-        "CREATE", "MERGE", "GRANT", "REVOKE", "EXEC", "EXECUTE",
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "DROP",
+        "ALTER",
+        "TRUNCATE",
+        "CREATE",
+        "MERGE",
+        "GRANT",
+        "REVOKE",
+        "EXEC",
+        "EXECUTE",
     ]
     first_word = cleaned.split()[0] if cleaned.split() else ""
 
@@ -141,8 +151,9 @@ def validate_sql_is_select(sql: str) -> bool:
     return True
 
 
-def dry_run_cost_check(sql: str, project_id: str,
-                       credentials_path: Optional[str] = None) -> Dict:
+def dry_run_cost_check(
+    sql: str, project_id: str, credentials_path: Optional[str] = None
+) -> Dict:
     """
     Run a BigQuery dry-run to estimate bytes scanned.
 
@@ -154,7 +165,9 @@ def dry_run_cost_check(sql: str, project_id: str,
         from google.oauth2 import service_account
 
         if credentials_path:
-            creds = service_account.Credentials.from_service_account_file(credentials_path)
+            creds = service_account.Credentials.from_service_account_file(
+                credentials_path
+            )
             client = bigquery.Client(project=project_id, credentials=creds)
         else:
             client = bigquery.Client(project=project_id)
@@ -169,7 +182,11 @@ def dry_run_cost_check(sql: str, project_id: str,
             "estimated_bytes": estimated,
             "estimated_mb": round(estimated / (1024 * 1024), 2),
             "approved": approved,
-            "reason": "OK" if approved else f"Exceeds {_MAX_BYTES_SCANNED / (1024*1024):.0f}MB limit",
+            "reason": (
+                "OK"
+                if approved
+                else f"Exceeds {_MAX_BYTES_SCANNED / (1024*1024):.0f}MB limit"
+            ),
         }
 
         if not approved:
@@ -182,7 +199,11 @@ def dry_run_cost_check(sql: str, project_id: str,
 
     except Exception as e:
         logger.warning(f"⚠️  Dry-run check failed: {e}")
-        return {"estimated_bytes": 0, "approved": True, "reason": f"Dry-run failed: {e}"}
+        return {
+            "estimated_bytes": 0,
+            "approved": True,
+            "reason": f"Dry-run failed: {e}",
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -215,9 +236,11 @@ class QueryAgent:
         """Initialise SQLAlchemy connection to BigQuery."""
         from langchain_community.utilities import SQLDatabase
         from sqlalchemy.engine.interfaces import Dialect
-        
+
         # Patch SQLAlchemy Dialect to avoid NotImplementedError for BigQuery views
-        Dialect.get_materialized_view_names = lambda self, connection, schema=None, **kw: []
+        Dialect.get_materialized_view_names = (
+            lambda self, connection, schema=None, **kw: []
+        )
 
         # Connect at the project level to access multiple datasets
         uri = f"bigquery://{self.project_id}"
@@ -231,8 +254,12 @@ class QueryAgent:
             "f1_raw_staging.stg_race_results",
         ]
 
-        self._db = SQLDatabase.from_uri(uri, include_tables=allowed_tables, view_support=True)
-        logger.info(f"✅ Agent connected to BigQuery: {self.project_id} (Restricted to {len(allowed_tables)} tables)")
+        self._db = SQLDatabase.from_uri(
+            uri, include_tables=allowed_tables, view_support=True
+        )
+        logger.info(
+            f"✅ Agent connected to BigQuery: {self.project_id} (Restricted to {len(allowed_tables)} tables)"
+        )
 
     def _init_sqlite_db(self):
         """Fallback: connect to local SQLite warehouse."""
@@ -260,7 +287,7 @@ class QueryAgent:
 
         # Initialise LLM
         from langchain_google_genai import ChatGoogleGenerativeAI
-        
+
         model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 
         llm = ChatGoogleGenerativeAI(
@@ -273,7 +300,7 @@ class QueryAgent:
         from langchain_community.agent_toolkits import SQLDatabaseToolkit
         from langchain_community.agent_toolkits import create_sql_agent
         from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
-        
+
         class StaticSQLDatabaseToolkit(SQLDatabaseToolkit):
             def get_tools(self):
                 # Return ONLY the query execution tool, skipping list/describe tools
@@ -286,7 +313,7 @@ class QueryAgent:
             agent_type="openai-tools",
             prefix=_SYSTEM_PROMPT,
             verbose=False,
-            agent_executor_kwargs={"return_intermediate_steps": True}
+            agent_executor_kwargs={"return_intermediate_steps": True},
         )
 
         logger.info("✅ LangChain SQL agent initialised")
@@ -322,14 +349,20 @@ class QueryAgent:
                     if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
                         if attempt < max_retries:
                             sleep_time = 15 * (attempt + 1)
-                            logger.warning(f"⚠️ Rate limit hit. Retrying in {sleep_time}s... (Attempt {attempt+1}/{max_retries})")
+                            logger.warning(
+                                f"⚠️ Rate limit hit. Retrying in {sleep_time}s... (Attempt {attempt+1}/{max_retries})"
+                            )
                             time.sleep(sleep_time)
                             continue
                     raise e
-                    
+
             raw_output = response.get("output", "")
             if isinstance(raw_output, list):
-                text_blocks = [item.get("text", "") for item in raw_output if isinstance(item, dict) and item.get("type") == "text"]
+                text_blocks = [
+                    item.get("text", "")
+                    for item in raw_output
+                    if isinstance(item, dict) and item.get("type") == "text"
+                ]
                 answer = "\n".join(text_blocks)
             else:
                 answer = str(raw_output)
@@ -337,13 +370,19 @@ class QueryAgent:
             # Try to extract SQL from intermediate steps
             generated_sql = ""
             if "intermediate_steps" in response:
-                print(f"DEBUG intermediate_steps: {response['intermediate_steps']}", flush=True)
+                print(
+                    f"DEBUG intermediate_steps: {response['intermediate_steps']}",
+                    flush=True,
+                )
                 for step in response["intermediate_steps"]:
                     if hasattr(step, "__len__") and len(step) >= 2:
                         action = step[0]
                         if hasattr(action, "tool_input"):
                             tool_input = action.tool_input
-                            if isinstance(tool_input, str) and "SELECT" in tool_input.upper():
+                            if (
+                                isinstance(tool_input, str)
+                                and "SELECT" in tool_input.upper()
+                            ):
                                 generated_sql = tool_input
                                 break
                             elif isinstance(tool_input, dict) and "query" in tool_input:

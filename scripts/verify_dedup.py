@@ -4,9 +4,11 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 from google.cloud import bigquery
+
 project_id = os.getenv("GCP_PROJECT_ID", "f1-platform-dev")
 client = bigquery.Client(project=project_id)
 
@@ -52,4 +54,6 @@ LIMIT 15
 """
 print("\n=== tire_degradation_by_circuit: Hungary sample ===")
 for row in client.query(q4).result():
-    print(f"  {row.driver_code} | {row.compound} | {row.n_laps} laps | deg={row.deg_seconds_per_lap} s/lap")
+    print(
+        f"  {row.driver_code} | {row.compound} | {row.n_laps} laps | deg={row.deg_seconds_per_lap} s/lap"
+    )

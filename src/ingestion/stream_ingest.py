@@ -41,9 +41,12 @@ class TelemetryPublisher:
     In local mode, pushes to an in-memory queue.
     """
 
-    def __init__(self, topic: str = "f1-lap-telemetry",
-                 project_id: Optional[str] = None,
-                 local_queue: Optional[queue.Queue] = None):
+    def __init__(
+        self,
+        topic: str = "f1-lap-telemetry",
+        project_id: Optional[str] = None,
+        local_queue: Optional[queue.Queue] = None,
+    ):
         self.topic = topic
         self.project_id = project_id
         self._local_queue = local_queue
@@ -52,6 +55,7 @@ class TelemetryPublisher:
         if local_queue is None and project_id:
             try:
                 from google.cloud import pubsub_v1
+
                 self._pubsub_publisher = pubsub_v1.PublisherClient()
                 self._topic_path = self._pubsub_publisher.topic_path(project_id, topic)
                 logger.info(f"✅ Pub/Sub publisher ready: {self._topic_path}")
@@ -107,10 +111,13 @@ class TelemetryConsumer:
     In local mode, reads from an in-memory queue.
     """
 
-    def __init__(self, loader: BigQueryLoader,
-                 subscription: str = "f1-lap-telemetry-sub",
-                 project_id: Optional[str] = None,
-                 local_queue: Optional[queue.Queue] = None):
+    def __init__(
+        self,
+        loader: BigQueryLoader,
+        subscription: str = "f1-lap-telemetry-sub",
+        project_id: Optional[str] = None,
+        local_queue: Optional[queue.Queue] = None,
+    ):
         self.loader = loader
         self.subscription = subscription
         self.project_id = project_id
@@ -129,7 +136,9 @@ class TelemetryConsumer:
             self.loader.load_live_telemetry(self._buffer)
             self._messages_consumed += len(self._buffer)
         except Exception as e:
-            logger.error(f"⚠️ Failed to flush batch of {len(self._buffer)} telemetry messages: {e}")
+            logger.error(
+                f"⚠️ Failed to flush batch of {len(self._buffer)} telemetry messages: {e}"
+            )
         finally:
             self._buffer = []
             self._last_flush_time = time.time()
@@ -143,6 +152,7 @@ class TelemetryConsumer:
     def consume_local(self, timeout: float = 30.0) -> int:
         """Consume from local queue until empty or timeout."""
         import traceback
+
         self._running = True
         self.exit_reason = "running"
         start = time.time()
@@ -172,14 +182,17 @@ class TelemetryConsumer:
             self._flush_buffer()
             if self.exit_reason == "running":
                 self.exit_reason = "completed"
-            
-        logger.info(f"✅ Consumer: processed {self._messages_consumed} messages (exit reason: {self.exit_reason})")
+
+        logger.info(
+            f"✅ Consumer: processed {self._messages_consumed} messages (exit reason: {self.exit_reason})"
+        )
         return self._messages_consumed
 
     def consume_pubsub(self, timeout: float = 60.0) -> int:
         """Subscribe to Pub/Sub and process messages."""
         try:
             from google.cloud import pubsub_v1
+
             subscriber = pubsub_v1.SubscriberClient()
             sub_path = subscriber.subscription_path(self.project_id, self.subscription)
 
@@ -250,21 +263,43 @@ def extract_lap_telemetry(circuit_name: str, year: int) -> List[Dict]:
             s2 = lap.get("Sector2Time")
             s3 = lap.get("Sector3Time")
 
-            laps.append({
-                "year": year,
-                "round": race_round,
-                "circuit_name": circuit_name,
-                "driver_code": driver,
-                "lap_number": int(lap.get("LapNumber", 0)),
-                "lap_time_seconds": lt_seconds,
-                "sector1_seconds": s1.total_seconds() if s1 is not None and hasattr(s1, "total_seconds") else None,
-                "sector2_seconds": s2.total_seconds() if s2 is not None and hasattr(s2, "total_seconds") else None,
-                "sector3_seconds": s3.total_seconds() if s3 is not None and hasattr(s3, "total_seconds") else None,
-                "compound": str(lap.get("Compound", "")),
-                "tyre_life": int(lap.get("TyreLife", 0)) if lap.get("TyreLife") is not None else None,
-                "position": int(lap.get("Position", 0)) if lap.get("Position") is not None else None,
-                "gap_to_leader": None,  # Would need delta calculation
-            })
+            laps.append(
+                {
+                    "year": year,
+                    "round": race_round,
+                    "circuit_name": circuit_name,
+                    "driver_code": driver,
+                    "lap_number": int(lap.get("LapNumber", 0)),
+                    "lap_time_seconds": lt_seconds,
+                    "sector1_seconds": (
+                        s1.total_seconds()
+                        if s1 is not None and hasattr(s1, "total_seconds")
+                        else None
+                    ),
+                    "sector2_seconds": (
+                        s2.total_seconds()
+                        if s2 is not None and hasattr(s2, "total_seconds")
+                        else None
+                    ),
+                    "sector3_seconds": (
+                        s3.total_seconds()
+                        if s3 is not None and hasattr(s3, "total_seconds")
+                        else None
+                    ),
+                    "compound": str(lap.get("Compound", "")),
+                    "tyre_life": (
+                        int(lap.get("TyreLife", 0))
+                        if lap.get("TyreLife") is not None
+                        else None
+                    ),
+                    "position": (
+                        int(lap.get("Position", 0))
+                        if lap.get("Position") is not None
+                        else None
+                    ),
+                    "gap_to_leader": None,  # Would need delta calculation
+                }
+            )
 
         # Sort by lap number for replay order
         laps.sort(key=lambda x: (x["lap_number"], x["driver_code"]))
@@ -285,18 +320,23 @@ def main():
     parser = argparse.ArgumentParser(
         description="🏎️  Simulated Streaming Ingestion — replay historical telemetry"
     )
-    parser.add_argument("--simulate", action="store_true",
-                        help="Run in simulation mode (local queue)")
+    parser.add_argument(
+        "--simulate", action="store_true", help="Run in simulation mode (local queue)"
+    )
     parser.add_argument("--circuit", type=str, default="Hungarian Grand Prix")
     parser.add_argument("--year", type=int, default=2024)
-    parser.add_argument("--interval", type=float, default=0.5,
-                        help="Seconds between replayed laps")
-    parser.add_argument("--log-level", default="INFO",
-                        choices=["DEBUG", "INFO", "WARNING", "ERROR"])
+    parser.add_argument(
+        "--interval", type=float, default=0.5, help="Seconds between replayed laps"
+    )
+    parser.add_argument(
+        "--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"]
+    )
     args = parser.parse_args()
 
-    logging.basicConfig(level=getattr(logging, args.log_level),
-                        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
 
     # Extract telemetry
     laps = extract_lap_telemetry(args.circuit, args.year)
@@ -333,7 +373,9 @@ def main():
                 elif reason == "crashed":
                     logger.error("❌ Consumer thread crashed with an exception!")
                 else:
-                    logger.error(f"❌ Consumer thread died unexpectedly! (reason: {reason})")
+                    logger.error(
+                        f"❌ Consumer thread died unexpectedly! (reason: {reason})"
+                    )
                 break
             if time.time() > timeout_at:
                 logger.error("❌ Timed out waiting for queue to drain!")
@@ -345,11 +387,12 @@ def main():
 
         expected_laps = len(laps)
         persisted_in_memory = consumer._messages_consumed
-        
+
         # Genuinely reliable completion check via BigQuery
         try:
             import os
             from google.cloud import bigquery
+
             bq_client = bigquery.Client(project=os.getenv("GCP_PROJECT_ID"))
             query = f"""
                 SELECT count(*) as cnt 
@@ -358,18 +401,23 @@ def main():
             """
             job = bq_client.query(query)
             result = list(job.result())
-            actual_bq_count = result[0]['cnt'] if result else 0
+            actual_bq_count = result[0]["cnt"] if result else 0
         except Exception as e:
             logger.error(f"⚠️ Could not verify BigQuery count: {e}")
             actual_bq_count = -1
 
         if actual_bq_count == expected_laps:
-            logger.info(f"✅ Stream complete: {actual_bq_count}/{expected_laps} laps actually persisted in BigQuery.")
+            logger.info(
+                f"✅ Stream complete: {actual_bq_count}/{expected_laps} laps actually persisted in BigQuery."
+            )
         else:
-            logger.error(f"❌ Stream failed or incomplete: internal counter says {persisted_in_memory}, but BigQuery actually has {actual_bq_count}/{expected_laps} rows.")
+            logger.error(
+                f"❌ Stream failed or incomplete: internal counter says {persisted_in_memory}, but BigQuery actually has {actual_bq_count}/{expected_laps} rows."
+            )
     else:
         # Pub/Sub mode
         import os
+
         project_id = os.getenv("GCP_PROJECT_ID")
         if not project_id:
             logger.error("GCP_PROJECT_ID required for Pub/Sub mode")
@@ -377,7 +425,9 @@ def main():
 
         publisher = TelemetryPublisher(project_id=project_id)
         publisher.replay_telemetry(laps, interval=args.interval)
-        logger.info("🏁 Published to Pub/Sub. Start consumer separately or use --simulate")
+        logger.info(
+            "🏁 Published to Pub/Sub. Start consumer separately or use --simulate"
+        )
 
 
 if __name__ == "__main__":

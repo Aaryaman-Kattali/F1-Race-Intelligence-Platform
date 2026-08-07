@@ -262,11 +262,41 @@ def mock_current_intelligence():
         "driver_standings": {
             "standings_available": True,
             "drivers": [
-                {"code": "PIA", "name": "Oscar Piastri", "position": 1, "points": 284, "team": "McLaren"},
-                {"code": "NOR", "name": "Lando Norris", "position": 2, "points": 275, "team": "McLaren"},
-                {"code": "VER", "name": "Max Verstappen", "position": 3, "points": 187, "team": "Red Bull Racing"},
-                {"code": "RUS", "name": "George Russell", "position": 4, "points": 172, "team": "Mercedes"},
-                {"code": "LEC", "name": "Charles Leclerc", "position": 5, "points": 151, "team": "Ferrari"},
+                {
+                    "code": "PIA",
+                    "name": "Oscar Piastri",
+                    "position": 1,
+                    "points": 284,
+                    "team": "McLaren",
+                },
+                {
+                    "code": "NOR",
+                    "name": "Lando Norris",
+                    "position": 2,
+                    "points": 275,
+                    "team": "McLaren",
+                },
+                {
+                    "code": "VER",
+                    "name": "Max Verstappen",
+                    "position": 3,
+                    "points": 187,
+                    "team": "Red Bull Racing",
+                },
+                {
+                    "code": "RUS",
+                    "name": "George Russell",
+                    "position": 4,
+                    "points": 172,
+                    "team": "Mercedes",
+                },
+                {
+                    "code": "LEC",
+                    "name": "Charles Leclerc",
+                    "position": 5,
+                    "points": 151,
+                    "team": "Ferrari",
+                },
             ],
         },
         "team_standings": {
@@ -290,14 +320,26 @@ def mock_current_intelligence():
 def mock_features_df():
     """Pre-built features DataFrame for predictor scoring tests."""
     data = {
-        "driver_name": ["Oscar Piastri", "Lando Norris", "Max Verstappen", "George Russell", "Kimi Antonelli"],
+        "driver_name": [
+            "Oscar Piastri",
+            "Lando Norris",
+            "Max Verstappen",
+            "George Russell",
+            "Kimi Antonelli",
+        ],
         "team_2025": ["McLaren", "McLaren", "Red Bull Racing", "Mercedes", "Mercedes"],
         "is_rookie_2025": [False, False, False, False, True],
         "historical_avg_position": [3.5, 4.0, 1.8, 4.5, 12.0],
         "grid_position": [2, 1, 3, 5, 10],
         "circuit_type_advantage": [0.2, 0.2, 0.2, 0.0, 0.0],
         "current_form_score": [0.95, 0.90, 0.85, 0.80, 0.65],
-        "current_team_2025": ["McLaren", "McLaren", "Red Bull Racing", "Mercedes", "Mercedes"],
+        "current_team_2025": [
+            "McLaren",
+            "McLaren",
+            "Red Bull Racing",
+            "Mercedes",
+            "Mercedes",
+        ],
     }
     df = pd.DataFrame(data, index=["PIA", "NOR", "VER", "RUS", "ANT"])
     df.index.name = "driver_code"

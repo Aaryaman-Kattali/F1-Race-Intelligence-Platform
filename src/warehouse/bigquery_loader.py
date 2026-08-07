@@ -47,7 +47,9 @@ class BigQueryLoader:
         self.dataset = dataset or _BQ_DATASET
         self._bq_client = None
         self._use_sqlite = False
-        self._sqlite_path = Path(os.getenv("SQLITE_WAREHOUSE_PATH", "data/warehouse.db"))
+        self._sqlite_path = Path(
+            os.getenv("SQLITE_WAREHOUSE_PATH", "data/warehouse.db")
+        )
 
         if self.project_id:
             try:
@@ -55,9 +57,13 @@ class BigQueryLoader:
 
                 self._bq_client = bigquery.Client(project=self.project_id)
                 self._ensure_dataset_exists()
-                logger.info(f"✅ BigQuery loader initialised (project={self.project_id}, dataset={self.dataset})")
+                logger.info(
+                    f"✅ BigQuery loader initialised (project={self.project_id}, dataset={self.dataset})"
+                )
             except Exception as e:
-                logger.warning(f"⚠️  BigQuery unavailable ({e}), falling back to SQLite")
+                logger.warning(
+                    f"⚠️  BigQuery unavailable ({e}), falling back to SQLite"
+                )
                 self._use_sqlite = True
         else:
             logger.info("📋 No GCP_PROJECT_ID — using local SQLite warehouse fallback")
@@ -92,7 +98,7 @@ class BigQueryLoader:
         except Exception:
             schema = TABLE_SCHEMAS.get(table_name, [])
             table = bigquery.Table(table_id, schema=schema)
-            
+
             # Apply partitioning and clustering to new tables
             if "year" in [field.name for field in schema]:
                 table.range_partitioning = bigquery.RangePartitioning(
@@ -101,7 +107,7 @@ class BigQueryLoader:
                 )
             if "circuit_name" in [field.name for field in schema]:
                 table.clustering_fields = ["circuit_name"]
-                
+
             self._bq_client.create_table(table)
             logger.info(f"📦 Created BigQuery table {table_id}")
 
@@ -213,7 +219,7 @@ class BigQueryLoader:
                 field="year",
                 range_=bigquery.PartitionRange(start=1950, end=2100, interval=1),
             )
-        
+
         if "circuit_name" in [field.name for field in schema]:
             job_config.clustering_fields = ["circuit_name"]
 
@@ -223,10 +229,14 @@ class BigQueryLoader:
         load_job.result()  # block until complete
 
         if load_job.errors:
-            logger.error(f"❌ BigQuery load errors for {table_name}: {load_job.errors[:3]}")
+            logger.error(
+                f"❌ BigQuery load errors for {table_name}: {load_job.errors[:3]}"
+            )
             return max(0, len(rows) - len(load_job.errors))
 
-        logger.debug(f"📦 Batch load job completed for {table_name}: {load_job.output_rows} rows")
+        logger.debug(
+            f"📦 Batch load job completed for {table_name}: {load_job.output_rows} rows"
+        )
         return load_job.output_rows or len(rows)
 
     # ------------------------------------------------------------------
@@ -304,7 +314,10 @@ class BigQueryLoader:
         col_names = ", ".join(columns)
         for row in rows:
             values = [row.get(c) for c in columns]
-            cursor.execute(f"INSERT INTO {table_name} ({col_names}) VALUES ({placeholders})", values)
+            cursor.execute(
+                f"INSERT INTO {table_name} ({col_names}) VALUES ({placeholders})",
+                values,
+            )
         conn.commit()
         conn.close()
         return len(rows)
@@ -317,51 +330,62 @@ class BigQueryLoader:
         """Make ingestion idempotent by deleting existing records for the incoming keys."""
         if not rows:
             return
-            
+
         # Extract unique (year, round, circuit_name) combinations
         keys = set()
         for r in rows:
             if "year" in r and "round" in r and "circuit_name" in r:
                 keys.add((r["year"], r["round"], r["circuit_name"]))
-                
+
         if not keys:
             return
-            
+
         if self._use_sqlite:
             conn = sqlite3.connect(str(self._sqlite_path))
             cursor = conn.cursor()
             for y, r, c in keys:
-                cursor.execute(f"DELETE FROM {table_name} WHERE year=? AND round=? AND circuit_name=?", (y, r, c))
+                cursor.execute(
+                    f"DELETE FROM {table_name} WHERE year=? AND round=? AND circuit_name=?",
+                    (y, r, c),
+                )
             conn.commit()
             conn.close()
-            logger.debug(f"🗑️ Cleaned existing SQLite records in {table_name} for {len(keys)} events")
+            logger.debug(
+                f"🗑️ Cleaned existing SQLite records in {table_name} for {len(keys)} events"
+            )
         else:
             self._ensure_table_exists(table_name)
             table_id = f"{self.project_id}.{self.dataset}.{table_name}"
-            
+
             conditions = []
             for y, r, c in keys:
                 c_esc = c.replace("'", "\\'")
-                conditions.append(f"(year = {y} AND round = {r} AND circuit_name = '{c_esc}')")
-                
+                conditions.append(
+                    f"(year = {y} AND round = {r} AND circuit_name = '{c_esc}')"
+                )
+
             where_clause = " OR ".join(conditions)
             query = f"DELETE FROM `{table_id}` WHERE {where_clause}"
-            
+
             try:
                 job = self._bq_client.query(query)
-                job.result() # Wait for completion
-                logger.debug(f"🗑️ Cleaned existing BigQuery records in {table_name} for {len(keys)} events")
+                job.result()  # Wait for completion
+                logger.debug(
+                    f"🗑️ Cleaned existing BigQuery records in {table_name} for {len(keys)} events"
+                )
             except Exception as e:
-                logger.warning(f"⚠️ Failed to delete existing records from {table_name} (might be empty/new): {e}")
+                logger.warning(
+                    f"⚠️ Failed to delete existing records from {table_name} (might be empty/new): {e}"
+                )
 
     def _load(self, table_name: str, rows: List[Dict]) -> int:
         """Route to BigQuery or SQLite."""
         if not rows:
             return 0
-            
+
         # Clean existing records to prevent duplicates
         self._delete_existing_records(table_name, rows)
-        
+
         # Stamp ingestion time
         for row in rows:
             row.setdefault("ingested_at", _now_iso())

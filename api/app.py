@@ -48,8 +48,11 @@ predictor = GPPredictor()
 # Request / Response models
 # ---------------------------------------------------------------------------
 
+
 class PredictRequest(BaseModel):
-    gp_name: str = Field(..., description="Grand Prix name, e.g. 'Hungarian Grand Prix'")
+    gp_name: str = Field(
+        ..., description="Grand Prix name, e.g. 'Hungarian Grand Prix'"
+    )
 
 
 class AskRequest(BaseModel):
@@ -59,6 +62,7 @@ class AskRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @app.get("/")
 async def home():

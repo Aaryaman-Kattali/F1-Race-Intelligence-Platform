@@ -4,7 +4,6 @@ BigQuery table schema definitions for the F1 Race Intelligence Platform.
 
 from google.cloud.bigquery import SchemaField
 
-
 # ---------------------------------------------------------------------------
 # Raw layer schemas
 # ---------------------------------------------------------------------------

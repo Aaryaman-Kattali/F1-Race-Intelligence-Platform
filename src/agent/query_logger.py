@@ -23,14 +23,15 @@ class QueryLogger:
         self.project_id = os.getenv("GCP_PROJECT_ID", "")
         self._bq_client = None
         self._use_sqlite = False
-        self._sqlite_path = Path(os.getenv(
-            "SQLITE_WAREHOUSE_PATH", "data/warehouse.db"
-        ))
+        self._sqlite_path = Path(
+            os.getenv("SQLITE_WAREHOUSE_PATH", "data/warehouse.db")
+        )
         self._table_id = ""
 
         if self.project_id:
             try:
                 from google.cloud import bigquery
+
                 self._bq_client = bigquery.Client(project=self.project_id)
                 self._table_id = f"{self.project_id}.monitoring.agent_query_log"
                 self._ensure_table()
@@ -93,11 +94,17 @@ class QueryLogger:
         conn.commit()
         conn.close()
 
-    def log(self, question: str, generated_sql: str = "",
-            response: str = "", success: bool = True,
-            error: Optional[str] = None, latency_ms: float = 0.0,
-            model_used: Optional[str] = None,
-            estimated_bytes: int = 0) -> None:
+    def log(
+        self,
+        question: str,
+        generated_sql: str = "",
+        response: str = "",
+        success: bool = True,
+        error: Optional[str] = None,
+        latency_ms: float = 0.0,
+        model_used: Optional[str] = None,
+        estimated_bytes: int = 0,
+    ) -> None:
         """Log a query interaction."""
         if model_used is None:
             model_used = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
@@ -105,7 +112,9 @@ class QueryLogger:
             "timestamp": datetime.utcnow().isoformat(),
             "question": question,
             "generated_sql": generated_sql,
-            "response": str(response)[:2000] if response else "",  # Force string and truncate
+            "response": (
+                str(response)[:2000] if response else ""
+            ),  # Force string and truncate
             "success": success,
             "error": str(error) if error else "",
             "latency_ms": latency_ms,
@@ -120,7 +129,9 @@ class QueryLogger:
                 try:
                     self._bq_client.insert_rows_json(self._table_id, [row])
                 except Exception as e:
-                    logger.warning(f"⚠️  BigQuery log failed (likely free tier constraint): {e}. Falling back to SQLite.")
+                    logger.warning(
+                        f"⚠️  BigQuery log failed (likely free tier constraint): {e}. Falling back to SQLite."
+                    )
                     self._use_sqlite = True
                     self._init_sqlite()
                     self._log_to_sqlite(row)
@@ -134,9 +145,17 @@ class QueryLogger:
         conn = sqlite3.connect(str(self._sqlite_path))
         conn.execute(
             "INSERT INTO agent_query_log VALUES (?,?,?,?,?,?,?,?,?)",
-            (row["timestamp"], row["question"], row["generated_sql"],
-             row["response"], int(row["success"]), row["error"],
-             row["latency_ms"], row["model_used"], row["estimated_bytes"]),
+            (
+                row["timestamp"],
+                row["question"],
+                row["generated_sql"],
+                row["response"],
+                int(row["success"]),
+                row["error"],
+                row["latency_ms"],
+                row["model_used"],
+                row["estimated_bytes"],
+            ),
         )
         conn.commit()
         conn.close()

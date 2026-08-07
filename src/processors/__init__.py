@@ -8,19 +8,16 @@ This package contains processors for:
 """
 
 from .historical_processor import HistoricalProcessor
-from .current_processor import CurrentProcessor  
+from .current_processor import CurrentProcessor
 from .feature_engineer import FeatureEngineer
 
-__all__ = [
-    "HistoricalProcessor",
-    "CurrentProcessor",
-    "FeatureEngineer"
-]
+__all__ = ["HistoricalProcessor", "CurrentProcessor", "FeatureEngineer"]
 
 # Processing capabilities
 try:
     import pandas as pd
     import numpy as np
+
     PROCESSING_AVAILABLE = True
     PANDAS_VERSION = pd.__version__
     NUMPY_VERSION = np.__version__
@@ -32,5 +29,5 @@ except ImportError:
 PROCESSOR_STATUS = {
     "processing_available": PROCESSING_AVAILABLE,
     "pandas_version": PANDAS_VERSION,
-    "numpy_version": NUMPY_VERSION
+    "numpy_version": NUMPY_VERSION,
 }

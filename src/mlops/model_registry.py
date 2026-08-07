@@ -47,7 +47,9 @@ class ModelRegistry:
         try:
             result = subprocess.run(
                 ["git", "rev-parse", "--short", "HEAD"],
-                capture_output=True, text=True, timeout=5
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             return result.stdout.strip() or "nogit"
         except Exception:
@@ -59,8 +61,7 @@ class ModelRegistry:
         git_hash = self._get_git_hash()
         return f"{ts}_{git_hash}"
 
-    def save_model(self, model: Any, name: str,
-                   metadata: Optional[Dict] = None) -> str:
+    def save_model(self, model: Any, name: str, metadata: Optional[Dict] = None) -> str:
         """
         Save a model artifact with metadata.
 
@@ -98,8 +99,10 @@ class ModelRegistry:
         with open(meta_path, "w") as f:
             json.dump(meta, f, indent=2, default=str)
 
-        logger.info(f"✅ Saved model '{name}' version {version_id} "
-                     f"({model_path.stat().st_size / 1024:.1f} KB)")
+        logger.info(
+            f"✅ Saved model '{name}' version {version_id} "
+            f"({model_path.stat().st_size / 1024:.1f} KB)"
+        )
         return version_id
 
     def list_versions(self, name: str) -> List[Dict]:

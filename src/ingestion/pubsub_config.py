@@ -12,8 +12,9 @@ DEFAULT_TOPIC = "f1-lap-telemetry"
 DEFAULT_SUBSCRIPTION = "f1-lap-telemetry-sub"
 
 
-def ensure_topic_exists(project_id: Optional[str] = None,
-                        topic_name: str = DEFAULT_TOPIC) -> bool:
+def ensure_topic_exists(
+    project_id: Optional[str] = None, topic_name: str = DEFAULT_TOPIC
+) -> bool:
     """Create Pub/Sub topic if it doesn't exist."""
     project_id = project_id or os.getenv("GCP_PROJECT_ID")
     if not project_id:
@@ -22,6 +23,7 @@ def ensure_topic_exists(project_id: Optional[str] = None,
 
     try:
         from google.cloud import pubsub_v1
+
         publisher = pubsub_v1.PublisherClient()
         topic_path = publisher.topic_path(project_id, topic_name)
 
@@ -38,9 +40,11 @@ def ensure_topic_exists(project_id: Optional[str] = None,
         return False
 
 
-def ensure_subscription_exists(project_id: Optional[str] = None,
-                               topic_name: str = DEFAULT_TOPIC,
-                               subscription_name: str = DEFAULT_SUBSCRIPTION) -> bool:
+def ensure_subscription_exists(
+    project_id: Optional[str] = None,
+    topic_name: str = DEFAULT_TOPIC,
+    subscription_name: str = DEFAULT_SUBSCRIPTION,
+) -> bool:
     """Create Pub/Sub subscription if it doesn't exist."""
     project_id = project_id or os.getenv("GCP_PROJECT_ID")
     if not project_id:
@@ -49,6 +53,7 @@ def ensure_subscription_exists(project_id: Optional[str] = None,
 
     try:
         from google.cloud import pubsub_v1
+
         subscriber = pubsub_v1.SubscriberClient()
         publisher = pubsub_v1.PublisherClient()
 

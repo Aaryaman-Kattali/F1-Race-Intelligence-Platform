@@ -12,7 +12,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.processors.feature_engineer import Enhanced2025FeatureEngineer
 
-
 # ---------------------------------------------------------------------------
 # Historical features (experienced drivers)
 # ---------------------------------------------------------------------------
@@ -60,7 +59,9 @@ class TestCreateHistoricalFeatures:
         # 3 races → 3/5 = 0.6, capped at 1.0
         assert 0.0 <= features["circuit_experience"] <= 1.0
 
-    def test_driver_not_in_data_returns_defaults(self, mock_historical_data, mock_circuit_config):
+    def test_driver_not_in_data_returns_defaults(
+        self, mock_historical_data, mock_circuit_config
+    ):
         """A driver with no historical results should get default values."""
         features = self.engineer._create_historical_features(
             "SAI", mock_historical_data, mock_circuit_config
@@ -69,7 +70,9 @@ class TestCreateHistoricalFeatures:
         assert features["historical_win_rate"] == 0.0
         assert features["circuit_race_count"] == 0
 
-    def test_consistency_between_zero_and_one(self, mock_historical_data, mock_circuit_config):
+    def test_consistency_between_zero_and_one(
+        self, mock_historical_data, mock_circuit_config
+    ):
         features = self.engineer._create_historical_features(
             "VER", mock_historical_data, mock_circuit_config
         )
@@ -100,26 +103,36 @@ class TestRookieFeatures:
         features = self.engineer._create_rookie_features_from_2025_data("HAD")
         assert features["rookie_penalty"] > 0.0
 
-    def test_rookie_data_confidence_and_teammate_proxy(self, mock_historical_data, mock_circuit_config, mock_current_intelligence, mock_weather_data_dry):
+    def test_rookie_data_confidence_and_teammate_proxy(
+        self,
+        mock_historical_data,
+        mock_circuit_config,
+        mock_current_intelligence,
+        mock_weather_data_dry,
+    ):
         """Test that Kimi Antonelli gets low data confidence and falls back to teammate RUS."""
         # Inject some mock history for RUS so the proxy has data
         mock_history = mock_historical_data.copy()
-        mock_history.append({
-            "circuit_name": "Hungarian Grand Prix",
-            "drivers": {
-                "RUS": {"race_position": 3, "grid_position": 2}
-            },
-            "race_winner": "VER"
-        })
-        
+        mock_history.append(
+            {
+                "circuit_name": "Hungarian Grand Prix",
+                "drivers": {"RUS": {"race_position": 3, "grid_position": 2}},
+                "race_winner": "VER",
+            }
+        )
+
         # Test full pipeline for ANT
         features = self.engineer._create_driver_features_real_2025(
-            "ANT", mock_history, mock_current_intelligence, mock_weather_data_dry, mock_circuit_config
+            "ANT",
+            mock_history,
+            mock_current_intelligence,
+            mock_weather_data_dry,
+            mock_circuit_config,
         )
-        
+
         # Confidence should be low (0 F1 races)
         assert features["data_confidence"] < 0.4
-        
+
         # Should have pulled proxy features from RUS (but with a slight penalty)
         # We don't check exact numbers since RUS mock might vary, but it shouldn't be the default 12.0
         assert "historical_avg_position" in features
@@ -139,7 +152,9 @@ class TestFormFeatures:
     def test_championship_leader_has_highest_form(self):
         features_leader = self.engineer._create_real_2025_form_features("PIA")
         features_mid = self.engineer._create_real_2025_form_features("ALO")
-        assert features_leader["current_form_score"] > features_mid["current_form_score"]
+        assert (
+            features_leader["current_form_score"] > features_mid["current_form_score"]
+        )
 
     def test_form_score_between_zero_and_one(self):
         for code in ["PIA", "NOR", "VER", "COL", "ANT"]:
@@ -178,13 +193,17 @@ class TestWeatherFeatures:
         )
         assert features["rain_specialist"] > 0.0
 
-    def test_no_rain_specialist_for_non_specialist(self, mock_weather_data_wet, mock_circuit_config):
+    def test_no_rain_specialist_for_non_specialist(
+        self, mock_weather_data_wet, mock_circuit_config
+    ):
         features = self.engineer._create_weather_features(
             "STR", mock_weather_data_wet, mock_circuit_config
         )
         assert features["rain_specialist"] == 0.0
 
-    def test_dry_conditions_no_rain_boost(self, mock_weather_data_dry, mock_circuit_config):
+    def test_dry_conditions_no_rain_boost(
+        self, mock_weather_data_dry, mock_circuit_config
+    ):
         features = self.engineer._create_weather_features(
             "HAM", mock_weather_data_dry, mock_circuit_config
         )
@@ -215,7 +234,9 @@ class TestCircuitFeatures:
         )
         assert features["circuit_type_advantage"] > 0.0
 
-    def test_non_specialist_no_advantage(self, mock_historical_data, mock_circuit_config):
+    def test_non_specialist_no_advantage(
+        self, mock_historical_data, mock_circuit_config
+    ):
         features = self.engineer._create_circuit_features(
             "STR", mock_circuit_config, mock_historical_data
         )
@@ -261,7 +282,9 @@ class TestEdgeCases:
         assert features["historical_avg_position"] == 12.0
         assert features["circuit_race_count"] == 0
 
-    def test_create_prediction_features_empty_input(self, mock_circuit_config, mock_weather_data_dry, mock_current_intelligence):
+    def test_create_prediction_features_empty_input(
+        self, mock_circuit_config, mock_weather_data_dry, mock_current_intelligence
+    ):
         """Full pipeline with empty historical data should still produce features."""
         features_df = self.engineer.create_prediction_features(
             historical_data=[],

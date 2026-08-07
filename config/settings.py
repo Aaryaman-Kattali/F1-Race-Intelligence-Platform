@@ -30,7 +30,13 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed"
 CACHE_DIR = DATA_DIR / "cache"
 
 # Create directories
-for directory in [DATA_DIR, FASTF1_CACHE_DIR, PREDICTIONS_DIR, PROCESSED_DATA_DIR, CACHE_DIR]:
+for directory in [
+    DATA_DIR,
+    FASTF1_CACHE_DIR,
+    PREDICTIONS_DIR,
+    PROCESSED_DATA_DIR,
+    CACHE_DIR,
+]:
     directory.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
@@ -163,7 +169,9 @@ class DynamicStandingsLoader:
                 cached = json.load(f)
             self._drivers = cached["drivers"]
             self._standings = cached["standings"]
-            self._team_rankings = cached.get("team_rankings", _FALLBACK_TEAM_RANKINGS_2025)
+            self._team_rankings = cached.get(
+                "team_rankings", _FALLBACK_TEAM_RANKINGS_2025
+            )
             self._source = "cache"
             logger.info("✅ Loaded standings from local cache")
             return True
@@ -237,12 +245,14 @@ class DynamicStandingsLoader:
                 code = str(row.get("Abbreviation", ""))
                 if code and code not in seen_codes:
                     seen_codes.add(code)
-                    drivers.append({
-                        "code": code,
-                        "name": f"{row.get('FirstName', '')} {row.get('LastName', '')}".strip(),
-                        "team": str(row.get("TeamName", "Unknown")),
-                        "number": int(row.get("DriverNumber", 0)),
-                    })
+                    drivers.append(
+                        {
+                            "code": code,
+                            "name": f"{row.get('FirstName', '')} {row.get('LastName', '')}".strip(),
+                            "team": str(row.get("TeamName", "Unknown")),
+                            "number": int(row.get("DriverNumber", 0)),
+                        }
+                    )
 
             if not drivers:
                 return False
@@ -266,10 +276,14 @@ class DynamicStandingsLoader:
             # and we'd need to sum across all rounds, use the fetched roster
             # but keep fallback standings for points (more accurate)
             self._drivers = drivers
-            self._standings = _FALLBACK_STANDINGS_2025  # Points from fallback are more accurate
+            self._standings = (
+                _FALLBACK_STANDINGS_2025  # Points from fallback are more accurate
+            )
             self._team_rankings = _FALLBACK_TEAM_RANKINGS_2025
             self._source = "fastf1_roster_with_fallback_points"
-            logger.info(f"✅ Loaded {len(drivers)} drivers from FastF1 (round {latest_round})")
+            logger.info(
+                f"✅ Loaded {len(drivers)} drivers from FastF1 (round {latest_round})"
+            )
             return True
 
         except Exception as e:
@@ -344,6 +358,7 @@ _standings_loader = DynamicStandingsLoader()
 # Public API  (drop-in replacements for the old static constants)
 # These are properties that trigger loading on first access.
 
+
 def _get_active_drivers():
     return _standings_loader.drivers
 
@@ -360,8 +375,10 @@ def _get_team_rankings():
 # will get the data via these module-level references.
 # We use a lazy-loading pattern: first access triggers the load.
 
+
 class _LazyList(list):
     """List that populates itself on first access."""
+
     def __init__(self, loader_fn):
         self._loader_fn = loader_fn
         self._loaded = False
@@ -395,6 +412,7 @@ class _LazyList(list):
 
 class _LazyDict(dict):
     """Dict that populates itself on first access."""
+
     def __init__(self, loader_fn):
         self._loader_fn = loader_fn
         self._loaded = False
@@ -451,6 +469,7 @@ TEAM_RANKINGS_2025 = _LazyDict(_get_team_rankings)
 # ---------------------------------------------------------------------------
 # Helper functions  (unchanged public API)
 # ---------------------------------------------------------------------------
+
 
 def get_active_driver_codes() -> List[str]:
     """Get list of 2025 active driver codes."""
@@ -514,9 +533,7 @@ LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "standard": {
-            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        },
+        "standard": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"},
     },
     "handlers": {
         "default": {

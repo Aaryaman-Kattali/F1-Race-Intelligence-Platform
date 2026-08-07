@@ -36,12 +36,12 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def create_spark_session(app_name: str = "F1-Telemetry-Features",
-                         master: str = "local[*]") -> SparkSession:
+def create_spark_session(
+    app_name: str = "F1-Telemetry-Features", master: str = "local[*]"
+) -> SparkSession:
     """Create SparkSession configured for local or cluster mode."""
     builder = (
-        SparkSession.builder
-        .appName(app_name)
+        SparkSession.builder.appName(app_name)
         .master(master)
         .config("spark.sql.adaptive.enabled", "true")
         .config("spark.sql.shuffle.partitions", "8")
@@ -60,12 +60,10 @@ def load_from_parquet(spark: SparkSession, path: str) -> DataFrame:
     return spark.read.parquet(path)
 
 
-def load_from_bigquery(spark: SparkSession, table: str,
-                       project_id: str) -> DataFrame:
+def load_from_bigquery(spark: SparkSession, table: str, project_id: str) -> DataFrame:
     """Load lap telemetry from BigQuery."""
     return (
-        spark.read
-        .format("bigquery")
+        spark.read.format("bigquery")
         .option("table", f"{project_id}.{table}")
         .option("viewsEnabled", "true")
         .load()
@@ -104,44 +102,76 @@ def load_sample_data(spark: SparkSession, year: int) -> DataFrame:
                     s2 = lap.get("Sector2Time")
                     s3 = lap.get("Sector3Time")
 
-                    all_laps.append({
-                        "year": year,
-                        "round": race_round,
-                        "circuit_name": event_name,
-                        "session_type": "RACE",
-                        "driver_code": str(lap.get("Driver", "")),
-                        "lap_number": int(lap.get("LapNumber", 0)),
-                        "lap_time_seconds": lt.total_seconds() if lt and hasattr(lt, "total_seconds") else None,
-                        "sector1_seconds": s1.total_seconds() if s1 and hasattr(s1, "total_seconds") else None,
-                        "sector2_seconds": s2.total_seconds() if s2 and hasattr(s2, "total_seconds") else None,
-                        "sector3_seconds": s3.total_seconds() if s3 and hasattr(s3, "total_seconds") else None,
-                        "compound": str(lap.get("Compound", "")),
-                        "tyre_life": int(lap.get("TyreLife", 0)) if lap.get("TyreLife") is not None else None,
-                        "stint": int(lap.get("Stint", 0)) if lap.get("Stint") is not None else None,
-                        "position": int(lap.get("Position", 0)) if lap.get("Position") is not None else None,
-                    })
+                    all_laps.append(
+                        {
+                            "year": year,
+                            "round": race_round,
+                            "circuit_name": event_name,
+                            "session_type": "RACE",
+                            "driver_code": str(lap.get("Driver", "")),
+                            "lap_number": int(lap.get("LapNumber", 0)),
+                            "lap_time_seconds": (
+                                lt.total_seconds()
+                                if lt and hasattr(lt, "total_seconds")
+                                else None
+                            ),
+                            "sector1_seconds": (
+                                s1.total_seconds()
+                                if s1 and hasattr(s1, "total_seconds")
+                                else None
+                            ),
+                            "sector2_seconds": (
+                                s2.total_seconds()
+                                if s2 and hasattr(s2, "total_seconds")
+                                else None
+                            ),
+                            "sector3_seconds": (
+                                s3.total_seconds()
+                                if s3 and hasattr(s3, "total_seconds")
+                                else None
+                            ),
+                            "compound": str(lap.get("Compound", "")),
+                            "tyre_life": (
+                                int(lap.get("TyreLife", 0))
+                                if lap.get("TyreLife") is not None
+                                else None
+                            ),
+                            "stint": (
+                                int(lap.get("Stint", 0))
+                                if lap.get("Stint") is not None
+                                else None
+                            ),
+                            "position": (
+                                int(lap.get("Position", 0))
+                                if lap.get("Position") is not None
+                                else None
+                            ),
+                        }
+                    )
             except Exception as e:
                 logger.warning(f"Skipping round {race_round}: {e}")
 
         if not all_laps:
             raise ValueError("No lap data extracted")
 
-        schema = T.StructType([
-            T.StructField("year", T.IntegerType()),
-            T.StructField("round", T.IntegerType()),
-            T.StructField("circuit_name", T.StringType()),
-            T.StructField("session_type", T.StringType()),
-            T.StructField("driver_code", T.StringType()),
-            T.StructField("lap_number", T.IntegerType()),
-            T.StructField("lap_time_seconds", T.DoubleType()),
-            T.StructField("sector1_seconds", T.DoubleType()),
-            T.StructField("sector2_seconds", T.DoubleType()),
-            T.StructField("sector3_seconds", T.DoubleType()),
-            T.StructField("compound", T.StringType()),
-            T.StructField("tyre_life", T.IntegerType()),
-            T.StructField("stint", T.IntegerType()),
-            T.StructField("position", T.IntegerType()),
-        ])
+        schema = T.StructType(
+            [
+                T.StructField("year", T.IntegerType()),
+                T.StructField("round", T.IntegerType()),
+                T.StructField("circuit_name", T.StringType()),
+                T.StructField("session_type", T.StringType()),
+                T.StructField("driver_code", T.StringType()),
+                T.StructField("lap_number", T.IntegerType()),
+                T.StructField("lap_time_seconds", T.DoubleType()),
+                T.StructField("sector1_seconds", T.DoubleType()),
+                T.StructField("sector2_seconds", T.DoubleType()),
+                T.StructField("sector3_seconds", T.DoubleType()),
+                T.StructField("compound", T.StringType()),
+                T.StructField("tyre_life", T.IntegerType()),
+                T.StructField("stint", T.IntegerType()),
+                T.StructField("position", T.IntegerType()),
+            ]
+        )
 
         return spark.createDataFrame(all_laps, schema=schema)
 
@@ -162,13 +192,12 @@ def filter_outlier_laps(df: DataFrame) -> DataFrame:
 
     df_with_stats = df.withColumn(
         "median_lap",
-        F.percentile_approx("lap_time_seconds", 0.5).over(driver_stint_window)
+        F.percentile_approx("lap_time_seconds", 0.5).over(driver_stint_window),
     )
 
     # Keep laps within 110% of median (filters pit laps, safety car anomalies)
     return (
-        df_with_stats
-        .filter(F.col("lap_time_seconds").isNotNull())
+        df_with_stats.filter(F.col("lap_time_seconds").isNotNull())
         .filter(F.col("lap_time_seconds") > 0)
         .filter(F.col("lap_time_seconds") <= F.col("median_lap") * 1.10)
         .drop("median_lap")
@@ -183,33 +212,21 @@ def compute_stint_degradation(df: DataFrame) -> DataFrame:
     - Lap-over-lap time delta (how much slower each lap is vs previous)
     - Cumulative degradation slope
     """
-    stint_window = Window.partitionBy(
-        "driver_code", "round_number", "stint"
-    ).orderBy("lap_number")
+    stint_window = Window.partitionBy("driver_code", "round_number", "stint").orderBy(
+        "lap_number"
+    )
 
     return (
         df
         # Lap-over-lap delta
-        .withColumn(
-            "prev_lap_time",
-            F.lag("lap_time_seconds", 1).over(stint_window)
-        )
-        .withColumn(
-            "lap_delta",
-            F.col("lap_time_seconds") - F.col("prev_lap_time")
-        )
+        .withColumn("prev_lap_time", F.lag("lap_time_seconds", 1).over(stint_window))
+        .withColumn("lap_delta", F.col("lap_time_seconds") - F.col("prev_lap_time"))
         # Rolling average delta over 3-lap window (smoothed degradation)
         .withColumn(
-            "rolling_delta_3",
-            F.avg("lap_delta").over(
-                stint_window.rowsBetween(-1, 1)
-            )
+            "rolling_delta_3", F.avg("lap_delta").over(stint_window.rowsBetween(-1, 1))
         )
         # Stint lap index (1, 2, 3, ... within each stint)
-        .withColumn(
-            "stint_lap_index",
-            F.row_number().over(stint_window)
-        )
+        .withColumn("stint_lap_index", F.row_number().over(stint_window))
         .drop("prev_lap_time")
     )
 
@@ -224,14 +241,9 @@ def compute_pace_features(df: DataFrame) -> DataFrame:
     lap_window = Window.partitionBy("round_number", "lap_number")
 
     return (
-        df
+        df.withColumn("leader_lap_time", F.min("lap_time_seconds").over(lap_window))
         .withColumn(
-            "leader_lap_time",
-            F.min("lap_time_seconds").over(lap_window)
-        )
-        .withColumn(
-            "pace_delta_to_leader",
-            F.col("lap_time_seconds") - F.col("leader_lap_time")
+            "pace_delta_to_leader", F.col("lap_time_seconds") - F.col("leader_lap_time")
         )
         .drop("leader_lap_time")
     )
@@ -243,20 +255,17 @@ def compute_consistency_features(df: DataFrame) -> DataFrame:
 
     Uses a 5-lap sliding window per driver per race.
     """
-    rolling_window = Window.partitionBy(
-        "driver_code", "round_number"
-    ).orderBy("lap_number").rowsBetween(-2, 2)
+    rolling_window = (
+        Window.partitionBy("driver_code", "round_number")
+        .orderBy("lap_number")
+        .rowsBetween(-2, 2)
+    )
 
-    return (
-        df
-        .withColumn(
-            "rolling_stddev_5",
-            F.stddev("lap_time_seconds").over(rolling_window)
-        )
-        .withColumn(
-            "consistency_score",
-            F.lit(1.0) / (F.lit(1.0) + F.coalesce(F.col("rolling_stddev_5"), F.lit(0.0)))
-        )
+    return df.withColumn(
+        "rolling_stddev_5", F.stddev("lap_time_seconds").over(rolling_window)
+    ).withColumn(
+        "consistency_score",
+        F.lit(1.0) / (F.lit(1.0) + F.coalesce(F.col("rolling_stddev_5"), F.lit(0.0))),
     )
 
 
@@ -267,22 +276,12 @@ def compute_sector_features(df: DataFrame) -> DataFrame:
     driver_race_window = Window.partitionBy("driver_code", "round_number")
 
     return (
-        df
-        .withColumn("avg_s1", F.avg("sector1_seconds").over(driver_race_window))
+        df.withColumn("avg_s1", F.avg("sector1_seconds").over(driver_race_window))
         .withColumn("avg_s2", F.avg("sector2_seconds").over(driver_race_window))
         .withColumn("avg_s3", F.avg("sector3_seconds").over(driver_race_window))
-        .withColumn(
-            "s1_delta",
-            F.col("sector1_seconds") - F.col("avg_s1")
-        )
-        .withColumn(
-            "s2_delta",
-            F.col("sector2_seconds") - F.col("avg_s2")
-        )
-        .withColumn(
-            "s3_delta",
-            F.col("sector3_seconds") - F.col("avg_s3")
-        )
+        .withColumn("s1_delta", F.col("sector1_seconds") - F.col("avg_s1"))
+        .withColumn("s2_delta", F.col("sector2_seconds") - F.col("avg_s2"))
+        .withColumn("s3_delta", F.col("sector3_seconds") - F.col("avg_s3"))
         .drop("avg_s1", "avg_s2", "avg_s3")
     )
 
@@ -295,14 +294,11 @@ def compute_teammate_comparison(df: DataFrame) -> DataFrame:
     grouping drivers who share the same circuit/position patterns.
     For simplicity, we add a per-lap rank within each race.
     """
-    race_lap_window = Window.partitionBy(
-        "round_number", "lap_number"
-    ).orderBy("lap_time_seconds")
-
-    return df.withColumn(
-        "lap_rank",
-        F.rank().over(race_lap_window)
+    race_lap_window = Window.partitionBy("round_number", "lap_number").orderBy(
+        "lap_time_seconds"
     )
+
+    return df.withColumn("lap_rank", F.rank().over(race_lap_window))
 
 
 def compute_aggregate_features(df: DataFrame) -> DataFrame:
@@ -313,33 +309,32 @@ def compute_aggregate_features(df: DataFrame) -> DataFrame:
     """
     df = df.withColumn(
         "clean_compound",
-        F.when(F.upper(F.col("compound")).isin("NAN", "NONE", "UNKNOWN", ""), F.lit(None))
-         .otherwise(F.col("compound"))
+        F.when(
+            F.upper(F.col("compound")).isin("NAN", "NONE", "UNKNOWN", ""), F.lit(None)
+        ).otherwise(F.col("compound")),
     ).withColumn(
         "compound_lap_rank",
-        F.when(F.col("clean_compound").isNotNull(), F.col("lap_number")).otherwise(F.lit(99999))
+        F.when(F.col("clean_compound").isNotNull(), F.col("lap_number")).otherwise(
+            F.lit(99999)
+        ),
     )
 
-    return (
-        df
-        .groupBy("season_year", "round_number", "circuit_name", "driver_code")
-        .agg(
-            F.count("*").alias("total_laps"),
-            F.round(F.avg("lap_time_seconds"), 3).alias("avg_lap_time"),
-            F.round(F.min("lap_time_seconds"), 3).alias("fastest_lap"),
-            F.round(F.max("lap_time_seconds"), 3).alias("slowest_lap"),
-            F.round(F.stddev("lap_time_seconds"), 3).alias("lap_time_stddev"),
-            F.round(F.avg("consistency_score"), 3).alias("avg_consistency"),
-            F.round(F.avg("pace_delta_to_leader"), 3).alias("avg_pace_delta"),
-            F.round(F.avg("lap_delta"), 4).alias("avg_degradation_per_lap"),
-            F.round(F.avg("rolling_delta_3"), 4).alias("avg_smoothed_degradation"),
-            F.countDistinct("stint").alias("num_stints"),
-            F.countDistinct("clean_compound").alias("num_compounds"),
-            F.expr("min_by(clean_compound, compound_lap_rank)").alias("starting_compound"),
-            F.round(F.avg("s1_delta"), 3).alias("avg_s1_delta"),
-            F.round(F.avg("s2_delta"), 3).alias("avg_s2_delta"),
-            F.round(F.avg("s3_delta"), 3).alias("avg_s3_delta"),
-        )
+    return df.groupBy("season_year", "round_number", "circuit_name", "driver_code").agg(
+        F.count("*").alias("total_laps"),
+        F.round(F.avg("lap_time_seconds"), 3).alias("avg_lap_time"),
+        F.round(F.min("lap_time_seconds"), 3).alias("fastest_lap"),
+        F.round(F.max("lap_time_seconds"), 3).alias("slowest_lap"),
+        F.round(F.stddev("lap_time_seconds"), 3).alias("lap_time_stddev"),
+        F.round(F.avg("consistency_score"), 3).alias("avg_consistency"),
+        F.round(F.avg("pace_delta_to_leader"), 3).alias("avg_pace_delta"),
+        F.round(F.avg("lap_delta"), 4).alias("avg_degradation_per_lap"),
+        F.round(F.avg("rolling_delta_3"), 4).alias("avg_smoothed_degradation"),
+        F.countDistinct("stint").alias("num_stints"),
+        F.countDistinct("clean_compound").alias("num_compounds"),
+        F.expr("min_by(clean_compound, compound_lap_rank)").alias("starting_compound"),
+        F.round(F.avg("s1_delta"), 3).alias("avg_s1_delta"),
+        F.round(F.avg("s2_delta"), 3).alias("avg_s2_delta"),
+        F.round(F.avg("s3_delta"), 3).alias("avg_s3_delta"),
     )
 
 
@@ -393,18 +388,22 @@ def main():
         description="🏎️  PySpark Telemetry Feature Engineering"
     )
     parser.add_argument("--year", type=int, default=2024)
-    parser.add_argument("--source", choices=["parquet", "bigquery", "fastf1"],
-                        default="fastf1")
+    parser.add_argument(
+        "--source", choices=["parquet", "bigquery", "fastf1"], default="fastf1"
+    )
     parser.add_argument("--input-path", type=str, default="data/laps.parquet")
-    parser.add_argument("--output-path", type=str, default="data/telemetry_features.parquet")
+    parser.add_argument(
+        "--output-path", type=str, default="data/telemetry_features.parquet"
+    )
     parser.add_argument("--bq-table", type=str, default="f1_raw.lap_times")
-    parser.add_argument("--master", type=str, default="local[*]",
-                        help="Spark master URL")
+    parser.add_argument(
+        "--master", type=str, default="local[*]", help="Spark master URL"
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     spark = create_spark_session(master=args.master)
@@ -416,6 +415,7 @@ def main():
             df = load_from_parquet(spark, args.input_path)
         elif args.source == "bigquery":
             import os
+
             project_id = os.getenv("GCP_PROJECT_ID", "")
             df = load_from_bigquery(spark, args.bq_table, project_id)
         else:

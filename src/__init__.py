@@ -12,8 +12,4 @@ from .predictor.gp_predictor import GPPredictor
 from .utils.circuit_mapping import CircuitMapper
 from .utils.helpers import setup_logging
 
-__all__ = [
-    "GPPredictor",
-    "CircuitMapper", 
-    "setup_logging"
-]
+__all__ = ["GPPredictor", "CircuitMapper", "setup_logging"]

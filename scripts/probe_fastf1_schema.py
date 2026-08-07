@@ -3,13 +3,14 @@
 """Probe FastF1 session.results and session.laps columns for Qualifying and Race."""
 import fastf1
 import warnings
-warnings.filterwarnings('ignore')
 
-fastf1.Cache.enable_cache('data/fastf1_cache')
+warnings.filterwarnings("ignore")
+
+fastf1.Cache.enable_cache("data/fastf1_cache")
 
 # Load a qualifying session
 print("=== QUALIFYING SESSION (Hungary 2024) ===")
-q_session = fastf1.get_session(2024, 'Hungary', 'Qualifying')
+q_session = fastf1.get_session(2024, "Hungary", "Qualifying")
 q_session.load()
 
 print("\nResults columns:", list(q_session.results.columns))
@@ -27,7 +28,7 @@ if not q_session.laps.empty:
 
 # Also check Race laps for compound/stint/tyre_life
 print("\n\n=== RACE SESSION LAPS (Hungary 2024) ===")
-r_session = fastf1.get_session(2024, 'Hungary', 'Race')
+r_session = fastf1.get_session(2024, "Hungary", "Race")
 r_session.load()
 
 print("Race laps columns:", list(r_session.laps.columns))

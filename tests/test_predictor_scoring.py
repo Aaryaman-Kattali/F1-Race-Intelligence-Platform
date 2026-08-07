@@ -25,11 +25,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 def _build_predictor():
     """Build a GPPredictor with mocked collectors."""
-    with patch("src.predictor.gp_predictor.FastF1Collector"), \
-         patch("src.predictor.gp_predictor.PerplexityAgent"), \
-         patch("src.predictor.gp_predictor.WeatherCollector"), \
-         patch("src.predictor.gp_predictor.Enhanced2025FeatureEngineer"), \
-         patch("src.predictor.gp_predictor.CircuitMapper") as MockMapper:
+    with patch("src.predictor.gp_predictor.FastF1Collector"), patch(
+        "src.predictor.gp_predictor.PerplexityAgent"
+    ), patch("src.predictor.gp_predictor.WeatherCollector"), patch(
+        "src.predictor.gp_predictor.Enhanced2025FeatureEngineer"
+    ), patch(
+        "src.predictor.gp_predictor.CircuitMapper"
+    ) as MockMapper:
 
         # Provide a minimal circuit config so _load_circuit_configs doesn't fail
         mock_instance = MockMapper.return_value
@@ -41,7 +43,15 @@ def _build_predictor():
         predictor.circuits = {}
         predictor.use_gpu = False
         predictor.gpu_config = {}
-        predictor.active_drivers_2025 = {"PIA", "NOR", "VER", "RUS", "ANT", "HAM", "LEC"}
+        predictor.active_drivers_2025 = {
+            "PIA",
+            "NOR",
+            "VER",
+            "RUS",
+            "ANT",
+            "HAM",
+            "LEC",
+        }
         return predictor
 
 
@@ -63,7 +73,9 @@ class TestLocalDataPrediction:
         total = sum(predictions.values())
         assert abs(total - 1.0) < 1e-6
 
-    def test_championship_leader_ranked_high(self, mock_features_df, mock_circuit_config):
+    def test_championship_leader_ranked_high(
+        self, mock_features_df, mock_circuit_config
+    ):
         """The championship leader (PIA, form_score=0.95) should be near the top."""
         predictions = self.predictor._local_data_prediction(
             mock_features_df, mock_circuit_config
@@ -143,9 +155,18 @@ class TestTeamAdvantage:
         assert mclaren > ferrari
 
     def test_known_teams_have_values(self):
-        teams = ["McLaren", "Ferrari", "Mercedes", "Red Bull Racing",
-                 "Williams", "Racing Bulls", "Haas", "Aston Martin",
-                 "Alpine", "Kick Sauber"]
+        teams = [
+            "McLaren",
+            "Ferrari",
+            "Mercedes",
+            "Red Bull Racing",
+            "Williams",
+            "Racing Bulls",
+            "Haas",
+            "Aston Martin",
+            "Alpine",
+            "Kick Sauber",
+        ]
         for team in teams:
             value = self.predictor._calculate_team_advantage(team)
             assert value > 0.0, f"No advantage for {team}"
@@ -209,7 +230,9 @@ class TestPatternMatching:
         )
         assert result is None
 
-    def test_winner_gets_bonus(self, mock_features_df, mock_historical_data, mock_circuit_config):
+    def test_winner_gets_bonus(
+        self, mock_features_df, mock_historical_data, mock_circuit_config
+    ):
         result = self.predictor._pattern_matching_prediction(
             mock_features_df, mock_historical_data, mock_circuit_config
         )
@@ -217,7 +240,9 @@ class TestPatternMatching:
         # VER won 2 of 3 races → should have a higher score
         assert result["VER"] > result["ANT"]
 
-    def test_probabilities_sum_to_one(self, mock_features_df, mock_historical_data, mock_circuit_config):
+    def test_probabilities_sum_to_one(
+        self, mock_features_df, mock_historical_data, mock_circuit_config
+    ):
         result = self.predictor._pattern_matching_prediction(
             mock_features_df, mock_historical_data, mock_circuit_config
         )

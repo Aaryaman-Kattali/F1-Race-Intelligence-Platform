@@ -17,12 +17,15 @@ for race in historical:
         print("Keys of race['weather']:", list(race.get("weather", {}).keys()))
         if "weather" in race:
             print("Content of race['weather']:", json.dumps(race["weather"], indent=2))
-        
+
         # also print sessions just in case
         print("Keys of race['sessions']:", list(race.get("sessions", {}).keys()))
         if "Race" in race.get("sessions", {}):
             race_session = race["sessions"]["Race"]
             print("Keys of race['sessions']['Race']:", list(race_session.keys()))
             if "weather" in race_session:
-                print("Content of race['sessions']['Race']['weather']:", json.dumps(race_session["weather"], indent=2))
+                print(
+                    "Content of race['sessions']['Race']['weather']:",
+                    json.dumps(race_session["weather"], indent=2),
+                )
         break
