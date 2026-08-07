@@ -158,7 +158,7 @@ def load_sample_data(spark: SparkSession, year: int) -> DataFrame:
 def filter_outlier_laps(df: DataFrame) -> DataFrame:
     """Remove pit in/out laps and outlier times (>110% of driver's median)."""
     # Calculate per-driver-per-stint median lap time
-    driver_stint_window = Window.partitionBy("driver_code", "round", "stint")
+    driver_stint_window = Window.partitionBy("driver_code", "round_number", "stint")
 
     df_with_stats = df.withColumn(
         "median_lap",
@@ -184,7 +184,7 @@ def compute_stint_degradation(df: DataFrame) -> DataFrame:
     - Cumulative degradation slope
     """
     stint_window = Window.partitionBy(
-        "driver_code", "round", "stint"
+        "driver_code", "round_number", "stint"
     ).orderBy("lap_number")
 
     return (
@@ -221,7 +221,7 @@ def compute_pace_features(df: DataFrame) -> DataFrame:
     Uses a partition by (round, lap_number) to find the leader's time
     on each lap and compute each driver's gap.
     """
-    lap_window = Window.partitionBy("round", "lap_number")
+    lap_window = Window.partitionBy("round_number", "lap_number")
 
     return (
         df
@@ -244,7 +244,7 @@ def compute_consistency_features(df: DataFrame) -> DataFrame:
     Uses a 5-lap sliding window per driver per race.
     """
     rolling_window = Window.partitionBy(
-        "driver_code", "round"
+        "driver_code", "round_number"
     ).orderBy("lap_number").rowsBetween(-2, 2)
 
     return (
@@ -264,7 +264,7 @@ def compute_sector_features(df: DataFrame) -> DataFrame:
     """
     Compute sector time deltas and identify strongest sectors per driver.
     """
-    driver_race_window = Window.partitionBy("driver_code", "round")
+    driver_race_window = Window.partitionBy("driver_code", "round_number")
 
     return (
         df
@@ -296,7 +296,7 @@ def compute_teammate_comparison(df: DataFrame) -> DataFrame:
     For simplicity, we add a per-lap rank within each race.
     """
     race_lap_window = Window.partitionBy(
-        "round", "lap_number"
+        "round_number", "lap_number"
     ).orderBy("lap_time_seconds")
 
     return df.withColumn(
@@ -311,9 +311,18 @@ def compute_aggregate_features(df: DataFrame) -> DataFrame:
 
     This is the final summary table — one row per driver per race.
     """
+    df = df.withColumn(
+        "clean_compound",
+        F.when(F.upper(F.col("compound")).isin("NAN", "NONE", "UNKNOWN", ""), F.lit(None))
+         .otherwise(F.col("compound"))
+    ).withColumn(
+        "compound_lap_rank",
+        F.when(F.col("clean_compound").isNotNull(), F.col("lap_number")).otherwise(F.lit(99999))
+    )
+
     return (
         df
-        .groupBy("year", "round", "circuit_name", "driver_code")
+        .groupBy("season_year", "round_number", "circuit_name", "driver_code")
         .agg(
             F.count("*").alias("total_laps"),
             F.round(F.avg("lap_time_seconds"), 3).alias("avg_lap_time"),
@@ -325,8 +334,8 @@ def compute_aggregate_features(df: DataFrame) -> DataFrame:
             F.round(F.avg("lap_delta"), 4).alias("avg_degradation_per_lap"),
             F.round(F.avg("rolling_delta_3"), 4).alias("avg_smoothed_degradation"),
             F.countDistinct("stint").alias("num_stints"),
-            F.countDistinct("compound").alias("num_compounds"),
-            F.first("compound").alias("starting_compound"),
+            F.countDistinct("clean_compound").alias("num_compounds"),
+            F.expr("min_by(clean_compound, compound_lap_rank)").alias("starting_compound"),
             F.round(F.avg("s1_delta"), 3).alias("avg_s1_delta"),
             F.round(F.avg("s2_delta"), 3).alias("avg_s2_delta"),
             F.round(F.avg("s3_delta"), 3).alias("avg_s3_delta"),

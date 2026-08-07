@@ -117,26 +117,63 @@ class TelemetryConsumer:
         self._local_queue = local_queue
         self._running = False
         self._messages_consumed = 0
+        self._buffer = []
+        self._last_flush_time = time.time()
+        self.exit_reason = "running"
+
+    def _flush_buffer(self) -> None:
+        if not self._buffer:
+            self._last_flush_time = time.time()
+            return
+        try:
+            self.loader.load_live_telemetry(self._buffer)
+            self._messages_consumed += len(self._buffer)
+        except Exception as e:
+            logger.error(f"⚠️ Failed to flush batch of {len(self._buffer)} telemetry messages: {e}")
+        finally:
+            self._buffer = []
+            self._last_flush_time = time.time()
 
     def _process_message(self, message: Dict) -> None:
         """Process a single telemetry message."""
-        self.loader.load_live_telemetry([message])
-        self._messages_consumed += 1
+        self._buffer.append(message)
+        if len(self._buffer) >= 50 or (time.time() - self._last_flush_time) >= 2.0:
+            self._flush_buffer()
 
     def consume_local(self, timeout: float = 30.0) -> int:
         """Consume from local queue until empty or timeout."""
+        import traceback
         self._running = True
+        self.exit_reason = "running"
         start = time.time()
-        while self._running and (time.time() - start) < timeout:
-            try:
-                message = self._local_queue.get(timeout=1.0)
-                self._process_message(message)
-                self._local_queue.task_done()
-            except queue.Empty:
-                if not self._running:
+        try:
+            while self._running:
+                if time.time() - start >= timeout:
+                    self.exit_reason = "timed_out"
                     break
-                continue
-        logger.info(f"✅ Consumer: processed {self._messages_consumed} messages")
+
+                if self._buffer and (time.time() - self._last_flush_time) >= 2.0:
+                    self._flush_buffer()
+
+                try:
+                    message = self._local_queue.get(timeout=0.5)
+                    self._process_message(message)
+                    self._local_queue.task_done()
+                except queue.Empty:
+                    if not self._running:
+                        self.exit_reason = "completed"
+                        break
+                    continue
+        except Exception as e:
+            logger.error(f"❌ Consumer thread crashed: {e}")
+            logger.error(traceback.format_exc())
+            self.exit_reason = "crashed"
+        finally:
+            self._flush_buffer()
+            if self.exit_reason == "running":
+                self.exit_reason = "completed"
+            
+        logger.info(f"✅ Consumer: processed {self._messages_consumed} messages (exit reason: {self.exit_reason})")
         return self._messages_consumed
 
     def consume_pubsub(self, timeout: float = 60.0) -> int:
@@ -278,7 +315,7 @@ def main():
         # Run consumer in background thread
         consumer_thread = threading.Thread(
             target=consumer.consume_local,
-            kwargs={"timeout": len(laps) * args.interval + 30},
+            kwargs={"timeout": len(laps) * args.interval + 300},
             daemon=True,
         )
         consumer_thread.start()
@@ -286,12 +323,50 @@ def main():
         # Replay in main thread
         publisher.replay_telemetry(laps, interval=args.interval)
 
-        # Wait for consumer to drain
-        local_q.join()
-        consumer.stop()
-        consumer_thread.join(timeout=5)
+        # Wait for consumer to drain with health checks
+        timeout_at = time.time() + 300
+        while local_q.unfinished_tasks > 0:
+            if not consumer_thread.is_alive():
+                reason = getattr(consumer, "exit_reason", "unknown")
+                if reason == "timed_out":
+                    logger.warning("⚠️ Consumer thread exited early due to timeout.")
+                elif reason == "crashed":
+                    logger.error("❌ Consumer thread crashed with an exception!")
+                else:
+                    logger.error(f"❌ Consumer thread died unexpectedly! (reason: {reason})")
+                break
+            if time.time() > timeout_at:
+                logger.error("❌ Timed out waiting for queue to drain!")
+                break
+            time.sleep(0.5)
 
-        logger.info(f"🏁 Simulation complete: {consumer._messages_consumed} messages processed")
+        consumer.stop()
+        consumer_thread.join(timeout=15)
+
+        expected_laps = len(laps)
+        persisted_in_memory = consumer._messages_consumed
+        
+        # Genuinely reliable completion check via BigQuery
+        try:
+            import os
+            from google.cloud import bigquery
+            bq_client = bigquery.Client(project=os.getenv("GCP_PROJECT_ID"))
+            query = f"""
+                SELECT count(*) as cnt 
+                FROM `f1_raw.live_lap_telemetry`
+                WHERE circuit_name = '{args.circuit}' AND year = {args.year}
+            """
+            job = bq_client.query(query)
+            result = list(job.result())
+            actual_bq_count = result[0]['cnt'] if result else 0
+        except Exception as e:
+            logger.error(f"⚠️ Could not verify BigQuery count: {e}")
+            actual_bq_count = -1
+
+        if actual_bq_count == expected_laps:
+            logger.info(f"✅ Stream complete: {actual_bq_count}/{expected_laps} laps actually persisted in BigQuery.")
+        else:
+            logger.error(f"❌ Stream failed or incomplete: internal counter says {persisted_in_memory}, but BigQuery actually has {actual_bq_count}/{expected_laps} rows.")
     else:
         # Pub/Sub mode
         import os

@@ -114,6 +114,7 @@ class BigQueryLoader:
         INTEGER schema rejects.  This method walks the schema and:
           - INTEGER fields: float → int, NaN/None → None
           - BOOLEAN fields: truthy → bool, NaN/None → None
+          - FLOAT fields: NaN → None (to prevent invalid JSON 'NaN')
         """
         import math
         from src.warehouse.schema import TABLE_SCHEMAS
@@ -125,13 +126,16 @@ class BigQueryLoader:
         # Build lookup: field_name → field_type
         int_fields = set()
         bool_fields = set()
+        float_fields = set()
         for field in schema:
             if field.field_type == "INTEGER":
                 int_fields.add(field.name)
             elif field.field_type in ("BOOLEAN", "BOOL"):
                 bool_fields.add(field.name)
+            elif field.field_type in ("FLOAT", "FLOAT64"):
+                float_fields.add(field.name)
 
-        if not int_fields and not bool_fields:
+        if not int_fields and not bool_fields and not float_fields:
             return rows
 
         sanitized = []
@@ -164,6 +168,13 @@ class BigQueryLoader:
                     else:
                         clean[col] = bool(val)
                 except (ValueError, TypeError):
+                    clean[col] = None
+
+            for col in float_fields:
+                val = clean.get(col)
+                if val is None:
+                    continue
+                if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
                     clean[col] = None
 
             sanitized.append(clean)
