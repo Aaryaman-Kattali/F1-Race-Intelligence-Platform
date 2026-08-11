@@ -10,6 +10,14 @@ Grand Prix, 2018–2024. More circuits can be added via backfill (see below).
 
 ---
 
+<img width="1918" height="866" alt="Screenshot 2026-08-11 120930" src="https://github.com/user-attachments/assets/881134b3-d68f-4304-a5e5-2ca3ece66844" />
+<img width="1918" height="870" alt="Screenshot 2026-08-11 120954" src="https://github.com/user-attachments/assets/a5a60bba-43ea-4a3f-a9a5-701d92bcc4a6" />
+<img width="1918" height="868" alt="Screenshot 2026-08-11 121005" src="https://github.com/user-attachments/assets/019794de-d860-4e83-bb15-8114ef7a38bc" />
+<img width="1918" height="867" alt="Screenshot 2026-08-11 121016" src="https://github.com/user-attachments/assets/63dadf7c-dfb0-44fa-b82b-04e5ff8f89ea" />
+<img width="1918" height="870" alt="Screenshot 2026-08-11 121041" src="https://github.com/user-attachments/assets/de775991-a278-4d85-ad23-957385f00140" />
+<img width="1918" height="867" alt="Screenshot 2026-08-11 121050" src="https://github.com/user-attachments/assets/9dbcd10c-6be7-44a8-81c3-0268b6eaa890" />
+
+
 ## Architecture
 
 Every component below has been individually run and its output independently
