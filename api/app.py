@@ -191,6 +191,7 @@ def _readonly_bq_client():
         )
     return bigquery.Client(project=project_id)
 
+
 @app.get("/api/stats")
 async def get_stats():
     """Lightweight stats endpoint for frontend dashboard."""
@@ -200,13 +201,18 @@ async def get_stats():
 
     fallback_data = {
         "circuits_ingested": 4,
-        "circuit_names": ["Hungarian Grand Prix", "Italian Grand Prix", "Belgian Grand Prix", "British Grand Prix"],
+        "circuit_names": [
+            "Hungarian Grand Prix",
+            "Italian Grand Prix",
+            "Belgian Grand Prix",
+            "British Grand Prix",
+        ],
         "season_range": "2018-2024",
         # Last confirmed-real numbers, legacy alias rows excluded.
         "total_race_entries": 540,
         "total_laps_processed": 26367,
         "agent_model": os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
-        "live": False
+        "live": False,
     }
 
     try:
@@ -243,14 +249,18 @@ async def get_stats():
             FROM f1_raw_staging.stg_race_results
             WHERE LOWER(circuit_name) NOT IN UNNEST(@legacy)
         """
-        seasons_result = list(client.query(query_seasons, job_config=exclude_legacy).result())[0]
+        seasons_result = list(
+            client.query(query_seasons, job_config=exclude_legacy).result()
+        )[0]
         season_range = f"{seasons_result.min_y}-{seasons_result.max_y}"
 
         query_entries = """
             SELECT COUNT(*) as cnt FROM f1_raw_staging.stg_race_results
             WHERE LOWER(circuit_name) NOT IN UNNEST(@legacy)
         """
-        entries = list(client.query(query_entries, job_config=exclude_legacy).result())[0].cnt
+        entries = list(client.query(query_entries, job_config=exclude_legacy).result())[
+            0
+        ].cnt
 
         query_laps = """
             SELECT COUNT(*) as cnt FROM f1_raw_staging.stg_lap_times
@@ -265,15 +275,17 @@ async def get_stats():
             "total_race_entries": entries,
             "total_laps_processed": laps,
             "agent_model": os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
-            "live": True
+            "live": True,
         }
-        
+
         stats_cache["data"] = data
         stats_cache["timestamp"] = now
         return data
 
     except Exception as e:
-        logger.warning(f"Failed to fetch live stats from BigQuery, returning fallback: {e}")
+        logger.warning(
+            f"Failed to fetch live stats from BigQuery, returning fallback: {e}"
+        )
         return fallback_data
 
 
