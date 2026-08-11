@@ -10,6 +10,14 @@ Grand Prix, 2018–2024. More circuits can be added via backfill (see below).
 
 ---
 
+<img width="1918" height="866" alt="Screenshot 2026-08-11 120930" src="https://github.com/user-attachments/assets/881134b3-d68f-4304-a5e5-2ca3ece66844" />
+<img width="1918" height="870" alt="Screenshot 2026-08-11 120954" src="https://github.com/user-attachments/assets/a5a60bba-43ea-4a3f-a9a5-701d92bcc4a6" />
+<img width="1918" height="868" alt="Screenshot 2026-08-11 121005" src="https://github.com/user-attachments/assets/019794de-d860-4e83-bb15-8114ef7a38bc" />
+<img width="1918" height="867" alt="Screenshot 2026-08-11 121016" src="https://github.com/user-attachments/assets/63dadf7c-dfb0-44fa-b82b-04e5ff8f89ea" />
+<img width="1918" height="870" alt="Screenshot 2026-08-11 121041" src="https://github.com/user-attachments/assets/de775991-a278-4d85-ad23-957385f00140" />
+<img width="1918" height="867" alt="Screenshot 2026-08-11 121050" src="https://github.com/user-attachments/assets/9dbcd10c-6be7-44a8-81c3-0268b6eaa890" />
+
+
 ## Architecture
 
 Every component below has been individually run and its output independently
@@ -70,6 +78,36 @@ query agent. Treat it as a proven, working data processing capability, not
 
 ---
 
+## Frontend
+
+A Next.js + React Three Fiber frontend lives in `f1-frontend/` — one
+continuous scrollable page, six sections, dark carbon/cyan telemetry-HUD
+visual language throughout. Every number, chart, and animation on it is
+fetched live from this backend's API; nothing is hardcoded demo data.
+
+| # | Section | What it shows |
+|---|---------|----------------|
+| 1 | Hero | Particles assemble into a procedurally-built wireframe F1 car; live pipeline stats (circuits ingested, entries, laps) in the corners |
+| 2 | Circuit Selector | Stylized track outlines draw themselves in; selecting one fetches real top-5 driver performance |
+| 3 | Driver Performance | Odometer-style number counters, timing-tower bar comparisons per circuit |
+| 4 | Tire Degradation | Diverging compound bars, the fuel-load modeling caveat rendered as a real UI element, a lap-scrubber driven by one real recorded stint |
+| 5 | Live Replay | A real historical race replayed lap by lap along the track outline (position-based, not GPS-accurate) |
+| 6 | Pit Wall | The LangChain agent as a race-radio interface — real `/api/ask` calls, with rejected/destructive questions rendered as a visibly distinct guardrail response |
+
+Tech stack: Next.js (App Router), TypeScript, Tailwind, React Three Fiber +
+drei (Section 1's 3D scene), Framer Motion (all other animation).
+
+Deliberately **not currently deployed publicly** — Google Cloud Run,
+Cloud Build, and Secret Manager all require a linked billing account to
+enable, even for free-tier usage. Everything below runs fully locally
+without one. **Render** is a genuine no-credit-card alternative for a future
+public deployment (Docker-native, connects directly to GitHub) — worth
+revisiting when a billing account is available, since Cloud Run's
+service-account-attached auth is simpler than Render's env-var-based
+credential passing.
+
+---
+
 ## Prerequisites
 
 - Python 3.11+
@@ -84,6 +122,12 @@ higher Gemini rate limits) — the code has fallbacks for these (SQLite
 logging fallback, staging-layer deduplication instead of delete-on-write),
 so the **core pipeline works without billing enabled**. Enabling billing
 removes these restrictions if you hit them.
+
+**On the Google Cloud SDK (`gcloud`):** only needed if you plan to deploy to
+Cloud Run — not required to run this project locally. Local runs authenticate
+via the two downloaded service account JSON keys referenced in `.env`
+(`GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_AGENT_CREDENTIALS`), which is
+sufficient for BigQuery access without the SDK installed at all.
 
 ---
 
@@ -164,9 +208,39 @@ docker build -t f1-platform .
 docker run -p 8000:8000 --env-file .env -v "${PWD}/credentials:/app/credentials" f1-platform
 ```
 
----
+### Stage 6 — Frontend (runs alongside the backend, two terminals)
 
-## Testing
+The frontend is a separate process from the API — it needs the backend
+already running to show live data, so start them in this order.
+
+**Terminal 1 — backend** (if not already running from Stage 1):
+```bash
+cd F1-Race-Predictor
+venv\Scripts\activate          # Windows; source venv/bin/activate on Mac/Linux
+uvicorn api.app:app --reload --port 8000
+```
+Leave this running. Confirm it's up: `curl http://localhost:8000/api/health`.
+
+**Terminal 2 — frontend:**
+```bash
+cd F1-Race-Predictor/f1-frontend
+cp .env.local.example .env.local   # first time only — confirms it points at http://localhost:8000
+npm install                        # first time only
+npm run dev
+```
+Open `http://localhost:3000`.
+
+**What "working correctly" looks like:** the Hero section's top-right status
+indicator should be a **pulsing cyan dot** labeled "LIVE FROM WAREHOUSE" —
+confirming the frontend is genuinely reaching the backend, which is
+genuinely reaching BigQuery, not rendering fallback/cached numbers. If it's
+grey and says "CACHED," check Terminal 1 for backend errors first.
+
+To stop: `Ctrl+C` in both terminals. No cleanup needed — nothing is deployed
+to any cloud service, so there's nothing left running or costing anything
+once both terminals are closed.
+
+---
 
 ```bash
 pytest tests/ -v --cov=src
@@ -239,12 +313,17 @@ docker run --rm -it \
 │   ├── models/staging/     deduplication layer
 │   ├── models/marts/       driver_circuit_performance, driver_form_last5, tire_degradation_by_circuit
 │   └── seeds/               circuit_regulation_risk.csv
+├── f1-frontend/           Next.js + R3F frontend — see Frontend section above
+│   ├── app/                 page.tsx (all 6 sections composed here), layout.tsx
+│   ├── components/           Hero, CircuitSelector, DriverPerformance, TireDegradation, LiveReplay, PitWall
+│   └── lib/                   api.ts (backend client), circuits.ts, drivers.ts
 ├── src/
 │   ├── agent/               LangChain query agent + query logger
 │   ├── data_collectors/     FastF1Collector and others
-│   ├── ingestion/            batch_ingest.py
+│   ├── ingestion/            batch_ingest.py, stream_ingest.py
 │   ├── mlops/                 model registry
 │   ├── predictor/            rule-based/XGBoost prediction engine
+│   ├── processing/           telemetry_spark_job.py
 │   ├── processors/           feature engineering, rookie cold-start handling
 │   └── warehouse/            BigQueryLoader (append-only, sanitized loads)
 ├── scripts/                one-time diagnostic/migration scripts (documented, kept for reference)
