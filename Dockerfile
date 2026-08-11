@@ -32,12 +32,15 @@ COPY --from=builder /root/.local /root/.local
 # Copy application source
 COPY . .
 
-# Expose port
+# Cloud Run injects PORT (8080 by default); locally this falls back to 8000
+# so docker-compose's 8000:8000 mapping keeps working unchanged.
+ENV PORT=8000
 EXPOSE 8000
 
 # Healthcheck hitting /api/health
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8000/api/health || exit 1
+    CMD curl -f "http://localhost:${PORT}/api/health" || exit 1
 
-# Command to run the application
-CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Shell form so ${PORT} is expanded at runtime; exec so uvicorn is PID 1 and
+# receives Cloud Run's SIGTERM directly.
+CMD exec uvicorn api.app:app --host 0.0.0.0 --port ${PORT}

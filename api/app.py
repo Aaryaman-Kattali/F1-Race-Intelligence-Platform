@@ -176,8 +176,19 @@ def _readonly_bq_client():
         creds_file = Path(agent_creds_path)
         if not creds_file.is_absolute():
             creds_file = project_root / creds_file
-        creds = service_account.Credentials.from_service_account_file(str(creds_file))
-        return bigquery.Client(project=project_id, credentials=creds)
+        # Only use the key file if it is actually present. On Cloud Run there
+        # is no key file — credentials come from the attached runtime service
+        # account via ADC — and a stale env var pointing at a missing path
+        # must not take the whole endpoint down.
+        if creds_file.is_file():
+            creds = service_account.Credentials.from_service_account_file(
+                str(creds_file)
+            )
+            return bigquery.Client(project=project_id, credentials=creds)
+        logger.info(
+            f"GOOGLE_AGENT_CREDENTIALS points at {creds_file} which does not "
+            "exist — falling back to Application Default Credentials."
+        )
     return bigquery.Client(project=project_id)
 
 @app.get("/api/stats")

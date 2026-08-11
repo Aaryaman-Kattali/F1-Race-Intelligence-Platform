@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500&display=swap');
+@import "tailwindcss";
+
+:root {
+  --carbon: #0A0B0D;
+  --panel: #1C1E22;
+  --panel-line: #2A2D33;
+  --cyan: #00E5FF;
+  --amber: #FFB020;
+  --off-white: #E8E9EB;
+  --off-white-dim: #8A8D93;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  background: var(--carbon);
+  color: var(--off-white);
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+}
+
+.font-display {
+  font-family: 'Barlow Condensed', sans-serif;
+}
+
+.font-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

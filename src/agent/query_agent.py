@@ -14,6 +14,7 @@ import logging
 import os
 import re
 import time
+from pathlib import Path
 from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
@@ -244,11 +245,22 @@ class QueryAgent:
         self._db = None
         self._use_sqlite = False
 
-        # Use read-only credentials for the agent
-        self._agent_creds = os.getenv(
+        # Use read-only credentials for the agent. An empty value means
+        # "use Application Default Credentials", which is how this runs on
+        # Cloud Run — the attached runtime service account supplies them and
+        # no key file exists in the container. A path that is set but missing
+        # is treated the same way rather than crashing at query time.
+        _creds_path = os.getenv(
             "GOOGLE_AGENT_CREDENTIALS",
             os.getenv("GOOGLE_APPLICATION_CREDENTIALS", ""),
         )
+        if _creds_path and not Path(_creds_path).is_file():
+            logger.info(
+                f"Agent credentials path {_creds_path!r} not found — "
+                "falling back to Application Default Credentials."
+            )
+            _creds_path = ""
+        self._agent_creds = _creds_path
 
     def _init_bigquery_db(self):
         """Initialise SQLAlchemy connection to BigQuery."""
